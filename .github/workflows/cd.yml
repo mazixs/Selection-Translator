@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
 
 permissions:
   contents: write
@@ -28,7 +28,18 @@ jobs:
 
       - name: Verify tag version
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          RAW_TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RAW_TAG_VERSION}"
+
+          if ! echo "${RAW_TAG_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "Tag ${GITHUB_REF_NAME} must look like v1.0 or v1.0.0"
+            exit 1
+          fi
+
+          if echo "${RAW_TAG_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+$'; then
+            TAG_VERSION="${RAW_TAG_VERSION}.0"
+          fi
+
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
 

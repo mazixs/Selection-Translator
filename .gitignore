@@ -1,5 +1,36 @@
+# Dependencies
 node_modules/
+
+# Build and release artifacts
 outputs/
-.DS_Store
+dist/
+build/
+*.crx
+*.pem
+*.p12
+*.zip
+
+# Local secrets and machine-specific config
+.env
+.env.*
+!.env.example
+work/
+
+# Logs and caches
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.cache/
+coverage/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
 *.tmp

@@ -1,0 +1,225 @@
+#selection-translator-root {
+  all: initial;
+  color-scheme: light;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 2147483647;
+}
+
+#selection-translator-root *,
+#selection-translator-root *::before,
+#selection-translator-root *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+#selection-translator-root .stx-hidden {
+  display: none !important;
+}
+
+#selection-translator-root .stx-toolbar {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(20, 28, 38, 0.08);
+  border-radius: 8px;
+  box-shadow:
+    0 14px 34px rgba(18, 25, 38, 0.16),
+    0 2px 8px rgba(18, 25, 38, 0.1);
+  display: flex;
+  gap: 2px;
+  min-height: 34px;
+  padding: 4px;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+#selection-translator-root .stx-badge {
+  align-items: center;
+  background: #202833;
+  border: 0;
+  border-radius: 7px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 24px;
+  justify-content: center;
+  margin: 0 2px;
+  overflow: hidden;
+  width: 24px;
+}
+
+#selection-translator-root .stx-badge-icon {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+#selection-translator-root .stx-button,
+#selection-translator-root .stx-copy-translation {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #15181d;
+  cursor: pointer;
+  font-size: 14px;
+  height: 26px;
+  margin: 0;
+  padding: 0 10px;
+}
+
+#selection-translator-root .stx-button:hover,
+#selection-translator-root .stx-copy-translation:hover,
+#selection-translator-root .stx-icon-button:hover {
+  background: #f2f4f7;
+}
+
+#selection-translator-root .stx-button:disabled,
+#selection-translator-root .stx-icon-button:disabled {
+  color: #a0a7b2;
+  cursor: default;
+}
+
+#selection-translator-root .stx-button:disabled:hover,
+#selection-translator-root .stx-icon-button:disabled:hover {
+  background: transparent;
+}
+
+#selection-translator-root .stx-icon-button {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #15181d;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 17px;
+  height: 26px;
+  justify-content: center;
+  margin: 0;
+  min-width: 28px;
+  padding: 0 6px;
+}
+
+#selection-translator-root .stx-panel {
+  background: #ffffff;
+  border: 1px solid rgba(20, 28, 38, 0.08);
+  border-radius: 10px;
+  box-shadow:
+    0 22px 48px rgba(18, 25, 38, 0.18),
+    0 4px 12px rgba(18, 25, 38, 0.12);
+  color: #121417;
+  display: flex;
+  flex-direction: column;
+  max-height: min(360px, calc(100vh - 24px));
+  overflow: hidden;
+  pointer-events: auto;
+  width: min(340px, calc(100vw - 24px));
+}
+
+#selection-translator-root .stx-panel-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e7e9ee;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  min-height: 52px;
+  padding: 10px 12px;
+}
+
+#selection-translator-root .stx-language-label {
+  display: inline-flex;
+}
+
+#selection-translator-root .stx-language-select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #242933 50%) right 9px top 12px / 6px 6px no-repeat,
+    linear-gradient(135deg, #242933 50%, transparent 50%) right 4px top 12px / 6px 6px no-repeat;
+  border: 0;
+  border-radius: 6px;
+  color: #121417;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 98px;
+  padding: 5px 22px 5px 4px;
+}
+
+#selection-translator-root .stx-language-select:hover {
+  background-color: #f4f6f8;
+}
+
+#selection-translator-root .stx-panel-actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+#selection-translator-root .stx-panel-body {
+  background: #ffffff;
+  flex: 1 1 auto;
+  margin: 0;
+  min-height: 118px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#selection-translator-root .stx-panel-text {
+  color: #111318;
+  font-size: 14px;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#selection-translator-root .stx-panel[data-state="loading"] .stx-panel-text {
+  color: #596273;
+}
+
+#selection-translator-root .stx-panel[data-state="error"] .stx-panel-text {
+  color: #b42318;
+}
+
+#selection-translator-root .stx-panel-note {
+  color: #687385;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+#selection-translator-root .stx-panel-footer {
+  background: #ffffff;
+  border-top: 1px solid #eef0f4;
+  display: block;
+  flex: 0 0 auto;
+  margin: 0;
+  min-height: 0;
+  padding: 10px 16px 16px;
+}
+
+#selection-translator-root .stx-copy-translation {
+  background: #f0f2f5;
+  height: 30px;
+  padding: 0 12px;
+}
+
+#selection-translator-root .stx-visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

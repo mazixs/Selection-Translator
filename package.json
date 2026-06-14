@@ -1,0 +1,11 @@
+{
+  "name": "selection-translator-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "verify": "npm test",
+    "pack": "mkdir -p outputs && zip -r -FS outputs/selection-translator-extension.zip manifest.json src options popup assets package.json README.md LICENSE"
+  }
+}

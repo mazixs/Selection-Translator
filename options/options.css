@@ -1,0 +1,172 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 18px;
+}
+
+body {
+  background: #f5f7fa;
+  color: #15181d;
+  margin: 0;
+}
+
+.settings-shell {
+  margin: 0 auto;
+  max-width: 880px;
+  padding: 44px 28px 56px;
+}
+
+.settings-header {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.brand-mark {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(224, 36, 36, 0.18);
+  border-radius: 50%;
+  box-shadow: 0 10px 24px rgba(18, 25, 38, 0.08);
+  color: #e02424;
+  display: flex;
+  font-size: 28px;
+  font-weight: 800;
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+.settings-header p {
+  color: #657084;
+  font-size: 18px;
+  margin-top: 6px;
+}
+
+.settings-form {
+  display: grid;
+  gap: 20px;
+}
+
+.settings-section {
+  background: #ffffff;
+  border: 1px solid #e5e8ef;
+  border-radius: 8px;
+  padding: 26px;
+}
+
+.settings-section h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 9px;
+  margin-top: 18px;
+}
+
+.field:first-of-type {
+  margin-top: 0;
+}
+
+.field span {
+  color: #303744;
+  font-weight: 600;
+}
+
+.checkbox-field {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.checkbox-field input {
+  height: 22px;
+  width: 22px;
+}
+
+input,
+select {
+  background: #ffffff;
+  border: 1px solid #cfd6e3;
+  border-radius: 7px;
+  color: #15181d;
+  font: inherit;
+  min-height: 50px;
+  padding: 11px 13px;
+}
+
+input:focus,
+select:focus {
+  border-color: #3478f6;
+  outline: 3px solid rgba(52, 120, 246, 0.16);
+}
+
+.settings-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+button {
+  background: #1f2937;
+  border: 0;
+  border-radius: 7px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  min-height: 50px;
+  padding: 0 22px;
+}
+
+button:hover {
+  background: #111827;
+}
+
+.secondary-button {
+  background: #e8edf4;
+  color: #202733;
+}
+
+.secondary-button:hover {
+  background: #dce3ee;
+}
+
+#status {
+  color: #39714b;
+  min-height: 24px;
+}
+
+@media (max-width: 560px) {
+  .settings-shell {
+    padding: 28px 14px 40px;
+  }
+
+  .settings-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-actions button {
+    width: 100%;
+  }
+}

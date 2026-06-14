@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Selection Translator - настройки</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="settings-shell">
+      <header class="settings-header">
+        <div class="brand-mark">Y</div>
+        <div>
+          <h1>Selection Translator</h1>
+          <p>Панель перевода для выделенного текста.</p>
+        </div>
+      </header>
+
+      <form id="settings-form" class="settings-form">
+        <section class="settings-section">
+          <h2>Перевод</h2>
+
+          <label class="field">
+            <span>Язык перевода</span>
+            <select name="targetLanguage">
+              <option value="ru">Русский</option>
+              <option value="en">Английский</option>
+              <option value="de">Немецкий</option>
+              <option value="fr">Французский</option>
+              <option value="es">Испанский</option>
+              <option value="it">Итальянский</option>
+              <option value="tr">Турецкий</option>
+              <option value="uk">Украинский</option>
+            </select>
+          </label>
+
+          <label class="field checkbox-field">
+            <input type="checkbox" name="autoDetectSource">
+            <span>Автоопределять исходный язык</span>
+          </label>
+
+          <label class="field">
+            <span>Исходный язык, если автоопределение выключено</span>
+            <input name="sourceLanguage" type="text" placeholder="en">
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h2>Провайдер</h2>
+
+          <label class="field">
+            <span>Сервис перевода</span>
+            <select name="provider">
+              <option value="google">Google web, без ключа</option>
+              <option value="yandex-web">Yandex web, экспериментально</option>
+              <option value="yandex">Yandex Cloud Translate</option>
+              <option value="libretranslate">LibreTranslate endpoint</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>LibreTranslate-compatible endpoint</span>
+            <input name="endpoint" type="url" placeholder="https://translate.example.com">
+          </label>
+
+          <label class="field">
+            <span>API-ключ</span>
+            <input name="apiKey" type="password" autocomplete="off" placeholder="Нужен для Yandex Cloud">
+          </label>
+
+          <label class="field">
+            <span>Yandex folder id</span>
+            <input name="yandexFolderId" type="text" autocomplete="off" placeholder="b1g...">
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h2>Поведение</h2>
+
+          <label class="field checkbox-field">
+            <input type="checkbox" name="showSelectionToolbar">
+            <span>Показывать панель при выделении текста</span>
+          </label>
+
+          <label class="field checkbox-field">
+            <input type="checkbox" name="keepPanelOpen">
+            <span>Не закрывать окно перевода при снятии выделения</span>
+          </label>
+
+          <label class="field">
+            <span>Максимум символов для перевода</span>
+            <input name="maxCharacters" type="number" min="100" max="50000" step="100">
+          </label>
+        </section>
+
+        <footer class="settings-actions">
+          <button type="submit">Сохранить</button>
+          <button type="button" id="reset-button" class="secondary-button">Сбросить</button>
+          <span id="status" role="status"></span>
+        </footer>
+      </form>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

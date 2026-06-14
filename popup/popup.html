@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Selection Translator</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <img class="brand-mark" src="../assets/icon-48.png" alt="" aria-hidden="true">
+        <div>
+          <h1>Selection Translator</h1>
+          <p id="status-line">Загрузка...</p>
+        </div>
+      </header>
+
+      <dl class="settings-summary">
+        <div>
+          <dt>Язык</dt>
+          <dd id="target-language">-</dd>
+        </div>
+        <div>
+          <dt>Провайдер</dt>
+          <dd id="provider-status">-</dd>
+        </div>
+      </dl>
+
+      <button type="button" id="open-options">Настройки</button>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

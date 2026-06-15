@@ -9,14 +9,25 @@
   <body>
     <main class="settings-shell">
       <header class="settings-header">
-        <div class="brand-mark">Y</div>
-        <div>
+        <img class="brand-mark" src="../assets/icon-48.png" alt="" aria-hidden="true">
+        <div class="settings-heading">
           <h1>Selection Translator</h1>
           <p>Панель перевода для выделенного текста.</p>
         </div>
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Включить темную тему" title="Включить темную тему">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 14.2A7.7 7.7 0 0 1 9.8 3a8.7 8.7 0 1 0 11.2 11.2Z"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+        </button>
       </header>
 
       <form id="settings-form" class="settings-form">
+        <input type="hidden" name="themePreference" value="system">
+
         <section class="settings-section">
           <h2>Перевод</h2>
 

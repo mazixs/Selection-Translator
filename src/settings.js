@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   endpoint: "",
   apiKey: "",
   yandexFolderId: "",
+  themePreference: "system",
   autoDetectSource: true,
   showSelectionToolbar: true,
   keepPanelOpen: false,
@@ -58,6 +59,12 @@ export function mergeSettings(settings = {}) {
       typeof settings.yandexFolderId === "string"
         ? settings.yandexFolderId.trim()
         : DEFAULT_SETTINGS.yandexFolderId,
+    themePreference:
+      settings.themePreference === "system" ||
+      settings.themePreference === "light" ||
+      settings.themePreference === "dark"
+        ? settings.themePreference
+        : DEFAULT_SETTINGS.themePreference,
     autoDetectSource: Boolean(
       settings.autoDetectSource ?? DEFAULT_SETTINGS.autoDetectSource,
     ),

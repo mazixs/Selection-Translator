@@ -7,6 +7,17 @@ import {
   translateText,
 } from "../src/translator.js";
 
+type FetchCall = {
+  url: string | URL | Request;
+  init: RequestInit;
+};
+
+function getCall(calls: FetchCall[], index: number): FetchCall {
+  const call = calls[index];
+  assert.ok(call);
+  return call;
+}
+
 test("normalizeLibreTranslateUrl accepts full translate endpoint", () => {
   assert.equal(
     normalizeLibreTranslateUrl("https://translate.example.com/translate"),
@@ -47,7 +58,7 @@ test("translateText asks for provider setup when LibreTranslate endpoint is miss
 });
 
 test("translateText posts LibreTranslate-compatible payload and parses translatedText", async () => {
-  const calls = [];
+  const calls: FetchCall[] = [];
   const result = await translateText({
     text: "Hello world",
     settings: {
@@ -58,7 +69,7 @@ test("translateText posts LibreTranslate-compatible payload and parses translate
       autoDetectSource: false,
       apiKey: "secret",
     },
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
       return {
         ok: true,
@@ -70,11 +81,12 @@ test("translateText posts LibreTranslate-compatible payload and parses translate
     },
   });
 
+  const firstCall = getCall(calls, 0);
   assert.equal(result.ok, true);
   assert.equal(result.translatedText, "Привет, мир");
-  assert.equal(calls[0].url, "https://translate.example.com/translate");
-  assert.equal(calls[0].init.method, "POST");
-  assert.deepEqual(JSON.parse(calls[0].init.body), {
+  assert.equal(firstCall.url, "https://translate.example.com/translate");
+  assert.equal(firstCall.init.method, "POST");
+  assert.deepEqual(JSON.parse(String(firstCall.init.body)), {
     q: "Hello world",
     source: "en",
     target: "ru",
@@ -84,7 +96,7 @@ test("translateText posts LibreTranslate-compatible payload and parses translate
 });
 
 test("translateText uses Google web provider by default and parses nested response", async () => {
-  const calls = [];
+  const calls: FetchCall[] = [];
   const result = await translateText({
     text: "Hello world",
     settings: {
@@ -92,7 +104,7 @@ test("translateText uses Google web provider by default and parses nested respon
       sourceLanguage: "en",
       autoDetectSource: false,
     },
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
       return {
         ok: true,
@@ -111,16 +123,17 @@ test("translateText uses Google web provider by default and parses nested respon
     },
   });
 
+  const firstCall = getCall(calls, 0);
   assert.equal(result.ok, true);
   assert.equal(result.translatedText, "Привет, мир");
-  assert.match(calls[0].url, /^https:\/\/translate\.googleapis\.com\/translate_a\/single\?/);
-  assert.equal(calls[0].init.method, "GET");
-  assert.equal(new URL(calls[0].url).searchParams.get("sl"), "en");
-  assert.equal(new URL(calls[0].url).searchParams.get("tl"), "ru");
+  assert.match(String(firstCall.url), /^https:\/\/translate\.googleapis\.com\/translate_a\/single\?/);
+  assert.equal(firstCall.init.method, "GET");
+  assert.equal(new URL(String(firstCall.url)).searchParams.get("sl"), "en");
+  assert.equal(new URL(String(firstCall.url)).searchParams.get("tl"), "ru");
 });
 
 test("translateText posts Yandex Cloud payload and parses translations", async () => {
-  const calls = [];
+  const calls: FetchCall[] = [];
   const result = await translateText({
     text: "Hello world",
     settings: {
@@ -131,7 +144,7 @@ test("translateText posts Yandex Cloud payload and parses translations", async (
       apiKey: "yandex-secret",
       yandexFolderId: "folder-123",
     },
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
       return {
         ok: true,
@@ -150,15 +163,19 @@ test("translateText posts Yandex Cloud payload and parses translations", async (
     },
   });
 
+  const firstCall = getCall(calls, 0);
   assert.equal(result.ok, true);
   assert.equal(result.translatedText, "Привет, мир");
   assert.equal(
-    calls[0].url,
+    firstCall.url,
     "https://translate.api.cloud.yandex.net/translate/v2/translate",
   );
-  assert.equal(calls[0].init.method, "POST");
-  assert.equal(calls[0].init.headers.Authorization, "Api-Key yandex-secret");
-  assert.deepEqual(JSON.parse(calls[0].init.body), {
+  assert.equal(firstCall.init.method, "POST");
+  assert.equal(
+    new Headers(firstCall.init.headers).get("Authorization"),
+    "Api-Key yandex-secret",
+  );
+  assert.deepEqual(JSON.parse(String(firstCall.init.body)), {
     targetLanguageCode: "ru",
     sourceLanguageCode: "en",
     format: "PLAIN_TEXT",
@@ -186,7 +203,7 @@ test("translateText asks for Yandex API key before calling provider", async () =
 });
 
 test("translateText uses Yandex web session and translateSentence endpoint", async () => {
-  const calls = [];
+  const calls: FetchCall[] = [];
   const result = await translateText({
     text: "Hello world",
     settings: {
@@ -195,7 +212,7 @@ test("translateText uses Yandex web session and translateSentence endpoint", asy
       sourceLanguage: "en",
       autoDetectSource: false,
     },
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
 
       if (String(url).includes("/props/api/v1.0/sessions")) {
@@ -226,26 +243,28 @@ test("translateText uses Yandex web session and translateSentence endpoint", asy
     },
   });
 
+  const firstCall = getCall(calls, 0);
+  const secondCall = getCall(calls, 1);
   assert.equal(result.ok, true);
   assert.equal(result.translatedText, "Привет, мир");
   assert.equal(
-    calls[0].url,
+    firstCall.url,
     "https://translate.yandex.ru/props/api/v1.0/sessions?srv=tr-text",
   );
-  assert.equal(calls[0].init.method, "POST");
-  assert.equal(calls[0].init.headers.Referer, "https://translate.yandex.ru/");
-  assert.equal(calls[0].init.headers.Origin, "https://translate.yandex.ru");
-  assert.equal(calls[0].init.referrer, "https://translate.yandex.ru/");
+  assert.equal(firstCall.init.method, "POST");
+  assert.equal(new Headers(firstCall.init.headers).get("Referer"), "https://translate.yandex.ru/");
+  assert.equal(new Headers(firstCall.init.headers).get("Origin"), "https://translate.yandex.ru");
+  assert.equal(firstCall.init.referrer, "https://translate.yandex.ru/");
   assert.equal(
-    calls[1].url,
+    secondCall.url,
     "https://translate.yandex.net/api/v1/tr.json/translateSentence",
   );
-  assert.equal(calls[1].init.method, "POST");
-  assert.equal(calls[1].init.referrer, "https://translate.yandex.ru/");
-  assert.equal(calls[1].init.headers.Referer, "https://translate.yandex.ru/");
-  assert.equal(calls[1].init.headers.Origin, "https://translate.yandex.ru");
+  assert.equal(secondCall.init.method, "POST");
+  assert.equal(secondCall.init.referrer, "https://translate.yandex.ru/");
+  assert.equal(new Headers(secondCall.init.headers).get("Referer"), "https://translate.yandex.ru/");
+  assert.equal(new Headers(secondCall.init.headers).get("Origin"), "https://translate.yandex.ru");
   assert.deepEqual(
-    Object.fromEntries(new URLSearchParams(calls[1].init.body)),
+    Object.fromEntries(new URLSearchParams(String(secondCall.init.body))),
     {
       id: "web-session-0-0",
       srv: "tr-text",

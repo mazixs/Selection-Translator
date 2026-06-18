@@ -28,20 +28,24 @@ Selection Translator — компактное расширение для Chromi
 ## Установка для разработки
 
 1. Склонируйте репозиторий.
-2. Откройте в браузере страницу `chrome://extensions`.
-3. Включите режим разработчика.
-4. Нажмите `Загрузить распакованное расширение`.
-5. Выберите папку репозитория.
+2. Установите зависимости: `npm ci`.
+3. Соберите расширение: `npm run build`.
+4. Откройте в браузере страницу `chrome://extensions`.
+5. Включите режим разработчика.
+6. Нажмите `Загрузить распакованное расширение`.
+7. Выберите папку `dist/`.
 
-После изменений в `manifest.json` расширение нужно перезагрузить на странице расширений.
+После изменений в TypeScript-коде или `manifest.json` запустите `npm run build` и перезагрузите расширение на странице расширений.
 
 ## Команды
 
 | Команда | Что делает |
 | --- | --- |
-| `npm run verify` | Запускает все проверки проекта |
-| `npm test` | Запускает тесты через встроенный Node.js test runner |
-| `npm run pack` | Собирает zip-архив расширения в `outputs/` |
+| `npm run typecheck` | Проверяет TypeScript в строгом режиме без записи файлов |
+| `npm test` | Запускает тесты через встроенный Node.js test runner и `tsx` |
+| `npm run build` | Собирает рабочее Manifest V3-расширение в `dist/` |
+| `npm run verify` | Запускает typecheck, тесты и сборку |
+| `npm run pack` | Собирает zip-архив расширения из `dist/` в `outputs/` |
 
 Готовый архив появляется здесь:
 
@@ -49,7 +53,7 @@ Selection Translator — компактное расширение для Chromi
 outputs/selection-translator-extension.zip
 ```
 
-Папка `outputs/` не версионируется.
+Папки `dist/` и `outputs/` не версионируются.
 
 ## CI/CD
 
@@ -88,11 +92,12 @@ git push origin v1.0.0
 
 | Путь | Назначение |
 | --- | --- |
-| `manifest.json` | Конфигурация Manifest V3 расширения |
-| `src/` | Content script, background service worker, настройки и переводчики |
-| `popup/` | Popup расширения |
-| `options/` | Страница настроек |
+| `manifest.json` | Конфигурация Manifest V3 расширения, указывает на JS-файлы в собранном `dist/` |
+| `src/` | TypeScript-код content script, background service worker, настроек и переводчиков |
+| `popup/` | Popup расширения: HTML/CSS и TypeScript entrypoint |
+| `options/` | Страница настроек: HTML/CSS и TypeScript entrypoint |
 | `assets/` | Иконки расширения |
+| `scripts/` | Сборка TypeScript-исходников в рабочий `dist/` |
 | `tests/` | Тесты manifest, UI-скриптов, настроек и переводчиков |
 | `.github/workflows/` | CI и CD сценарии GitHub Actions |
 

@@ -5,8 +5,39 @@ import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 
-function readManifest() {
-  return JSON.parse(readFileSync(join(ROOT, "manifest.json"), "utf8"));
+type ExtensionManifest = {
+  manifest_version: number;
+  background: {
+    service_worker: string;
+  };
+  options_page: string;
+  action: {
+    default_popup: string;
+    default_icon: Record<string, string>;
+  };
+  content_scripts: [
+    {
+      js: string[];
+      css: string[];
+      matches: string[];
+    },
+  ];
+  icons: Record<string, string>;
+  permissions: string[];
+  host_permissions: string[];
+  optional_host_permissions: string[];
+  web_accessible_resources: Array<{
+    resources: string[];
+    matches: string[];
+  }>;
+};
+
+function readManifest(): ExtensionManifest {
+  return JSON.parse(readFileSync(join(ROOT, "manifest.json"), "utf8")) as ExtensionManifest;
+}
+
+function sourcePathForBuiltScript(scriptPath: string): string {
+  return scriptPath.replace(/\.js$/, ".ts");
 }
 
 test("manifest is Manifest V3 and references existing extension files", () => {
@@ -14,12 +45,15 @@ test("manifest is Manifest V3 and references existing extension files", () => {
 
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.background.service_worker, "src/background.js");
-  assert.equal(existsSync(join(ROOT, manifest.background.service_worker)), true);
+  assert.equal(
+    existsSync(join(ROOT, sourcePathForBuiltScript(manifest.background.service_worker))),
+    true,
+  );
   assert.equal(existsSync(join(ROOT, manifest.options_page)), true);
   assert.equal(existsSync(join(ROOT, manifest.action.default_popup)), true);
 
   for (const script of manifest.content_scripts[0].js) {
-    assert.equal(existsSync(join(ROOT, script)), true);
+    assert.equal(existsSync(join(ROOT, sourcePathForBuiltScript(script))), true);
   }
 
   for (const stylesheet of manifest.content_scripts[0].css) {
@@ -46,7 +80,7 @@ test("manifest includes permissions needed for storage, context menu, and provid
     true,
   );
   assert.equal(hostPermissions.includes("<all_urls>"), false);
-  assert.deepEqual(hostPermissions.toSorted(), [
+  assert.deepEqual([...hostPermissions].sort(), [
     "https://translate.api.cloud.yandex.net/*",
     "https://translate.googleapis.com/*",
     "https://translate.yandex.net/*",

@@ -1,4 +1,60 @@
-import { mergeSettings } from "./settings.js";
+import { mergeSettings, type Settings, type SettingsInput } from "./settings.js";
+
+export type LimitedText = {
+  text: string;
+  wasTrimmed: boolean;
+  originalLength: number;
+  limit: number;
+};
+
+export type TranslationSuccess = {
+  ok: true;
+  translatedText: string;
+  originalText: string;
+  targetLanguage: string;
+  wasTrimmed: boolean;
+};
+
+export type TranslationFailure = {
+  ok: false;
+  code: string;
+  message: string;
+  originalText: string;
+  wasTrimmed?: boolean;
+};
+
+export type TranslationResult = TranslationSuccess | TranslationFailure;
+
+type FetchLike = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Pick<Response, "ok" | "status" | "json">>;
+
+type ProviderContext = {
+  limited: LimitedText;
+  settings: Settings;
+  fetchImpl: FetchLike;
+};
+
+type LibreTranslateContext = ProviderContext & {
+  endpoint: string;
+};
+
+type YandexCloudBody = {
+  targetLanguageCode: string;
+  sourceLanguageCode?: string;
+  format: "PLAIN_TEXT";
+  texts: string[];
+  folderId?: string;
+};
+
+type LibreTranslateBody = {
+  q: string;
+  source: string;
+  target: string;
+  format: "text";
+  api_key?: string;
+};
 
 const YANDEX_TRANSLATE_URL =
   "https://translate.api.cloud.yandex.net/translate/v2/translate";
@@ -7,7 +63,7 @@ const YANDEX_WEB_SESSION_URL =
 const YANDEX_WEB_TRANSLATE_URL =
   "https://translate.yandex.net/api/v1/tr.json/translateSentence";
 
-export function normalizeLibreTranslateUrl(endpoint) {
+export function normalizeLibreTranslateUrl(endpoint: unknown): string {
   const trimmed = String(endpoint || "").trim();
 
   if (!trimmed) {
@@ -23,7 +79,7 @@ export function normalizeLibreTranslateUrl(endpoint) {
   return `${withoutTrailingSlash}/translate`;
 }
 
-export function limitTextForTranslation(text, limit) {
+export function limitTextForTranslation(text: unknown, limit: unknown): LimitedText {
   const sourceText = String(text || "");
   const normalizedLimit = Math.max(1, Number(limit) || 1);
 
@@ -35,7 +91,7 @@ export function limitTextForTranslation(text, limit) {
   };
 }
 
-function buildGoogleTranslateUrl(text, settings) {
+function buildGoogleTranslateUrl(text: string, settings: Settings): string {
   const params = new URLSearchParams({
     client: "gtx",
     sl: settings.autoDetectSource ? "auto" : settings.sourceLanguage,
@@ -47,46 +103,79 @@ function buildGoogleTranslateUrl(text, settings) {
   return `https://translate.googleapis.com/translate_a/single?${params.toString()}`;
 }
 
-function getGoogleTranslatedText(payload) {
-  if (!Array.isArray(payload?.[0])) {
+function getObjectRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getGoogleTranslatedText(payload: unknown): string {
+  if (!Array.isArray(payload)) {
     return "";
   }
 
-  return payload[0]
-    .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
+  const parts = payload[0];
+
+  if (!Array.isArray(parts)) {
+    return "";
+  }
+
+  return parts
+    .map((part: unknown) =>
+      Array.isArray(part) && typeof part[0] === "string" ? part[0] : "",
+    )
     .join("");
 }
 
-function getTranslatedText(payload) {
-  if (typeof payload?.translatedText === "string") {
-    return payload.translatedText;
+function getTranslatedText(payload: unknown): string {
+  const payloadRecord = getObjectRecord(payload);
+  if (!payloadRecord) {
+    return "";
   }
 
-  if (typeof payload?.translation === "string") {
-    return payload.translation;
+  if (typeof payloadRecord.translatedText === "string") {
+    return payloadRecord.translatedText;
   }
 
-  if (typeof payload?.data?.translatedText === "string") {
-    return payload.data.translatedText;
+  if (typeof payloadRecord.translation === "string") {
+    return payloadRecord.translation;
+  }
+
+  const data = getObjectRecord(payloadRecord.data);
+  if (typeof data?.translatedText === "string") {
+    return data.translatedText;
   }
 
   return "";
 }
 
-function getYandexTranslatedText(payload) {
-  const firstTranslation = payload?.translations?.[0];
-  return typeof firstTranslation?.text === "string" ? firstTranslation.text : "";
-}
-
-function getYandexWebTranslatedText(payload) {
-  if (!Array.isArray(payload?.text)) {
+function getYandexTranslatedText(payload: unknown): string {
+  const payloadRecord = getObjectRecord(payload);
+  const translations = payloadRecord?.translations;
+  if (!Array.isArray(translations)) {
     return "";
   }
 
-  return payload.text.filter((part) => typeof part === "string").join("\n");
+  const firstTranslation = getObjectRecord(translations[0]);
+  return typeof firstTranslation?.text === "string" ? firstTranslation.text : "";
 }
 
-async function translateWithGoogle({ limited, settings, fetchImpl }) {
+function getYandexWebTranslatedText(payload: unknown): string {
+  const payloadRecord = getObjectRecord(payload);
+  if (!Array.isArray(payloadRecord?.text)) {
+    return "";
+  }
+
+  return payloadRecord.text
+    .filter((part): part is string => typeof part === "string")
+    .join("\n");
+}
+
+async function translateWithGoogle({
+  limited,
+  settings,
+  fetchImpl,
+}: ProviderContext): Promise<TranslationResult> {
   const response = await fetchImpl(buildGoogleTranslateUrl(limited.text, settings), {
     method: "GET",
   });
@@ -123,8 +212,12 @@ async function translateWithGoogle({ limited, settings, fetchImpl }) {
   };
 }
 
-async function translateWithYandex({ limited, settings, fetchImpl }) {
-  const body = {
+async function translateWithYandex({
+  limited,
+  settings,
+  fetchImpl,
+}: ProviderContext): Promise<TranslationResult> {
+  const body: YandexCloudBody = {
     targetLanguageCode: settings.targetLanguage,
     format: "PLAIN_TEXT",
     texts: [limited.text],
@@ -179,7 +272,11 @@ async function translateWithYandex({ limited, settings, fetchImpl }) {
   };
 }
 
-async function translateWithYandexWeb({ limited, settings, fetchImpl }) {
+async function translateWithYandexWeb({
+  limited,
+  settings,
+  fetchImpl,
+}: ProviderContext): Promise<TranslationResult> {
   const sessionResponse = await fetchImpl(YANDEX_WEB_SESSION_URL, {
     method: "POST",
     referrer: "https://translate.yandex.ru/",
@@ -200,10 +297,11 @@ async function translateWithYandexWeb({ limited, settings, fetchImpl }) {
     };
   }
 
-  const sessionPayload = await sessionResponse.json();
-  const sessionId = sessionPayload?.session?.id;
+  const sessionPayload = getObjectRecord(await sessionResponse.json());
+  const session = getObjectRecord(sessionPayload?.session);
+  const sessionId = session?.id;
 
-  if (!sessionId) {
+  if (typeof sessionId !== "string" || !sessionId) {
     return {
       ok: false,
       code: "yandex_web_missing_session",
@@ -268,8 +366,13 @@ async function translateWithYandexWeb({ limited, settings, fetchImpl }) {
   };
 }
 
-async function translateWithLibreTranslate({ limited, settings, endpoint, fetchImpl }) {
-  const body = {
+async function translateWithLibreTranslate({
+  limited,
+  settings,
+  endpoint,
+  fetchImpl,
+}: LibreTranslateContext): Promise<TranslationResult> {
+  const body: LibreTranslateBody = {
     q: limited.text,
     source: settings.autoDetectSource ? "auto" : settings.sourceLanguage,
     target: settings.targetLanguage,
@@ -324,7 +427,11 @@ export async function translateText({
   text,
   settings: rawSettings = {},
   fetchImpl = globalThis.fetch,
-}) {
+}: {
+  text: unknown;
+  settings?: SettingsInput;
+  fetchImpl?: FetchLike;
+}): Promise<TranslationResult> {
   const settings = mergeSettings(rawSettings);
   const endpoint = normalizeLibreTranslateUrl(settings.endpoint);
   const limited = limitTextForTranslation(text, settings.maxCharacters);
@@ -389,10 +496,12 @@ export async function translateText({
       fetchImpl,
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
     return {
       ok: false,
       code: "network_error",
-      message: `Не удалось получить перевод: ${error.message}`,
+      message: `Не удалось получить перевод: ${message}`,
       originalText: limited.text,
       wasTrimmed: limited.wasTrimmed,
     };

@@ -31,7 +31,7 @@ test("options styles inherit browser color scheme and allow explicit overrides",
 });
 
 test("options script resolves system theme and updates the theme toggle icon", () => {
-  const optionsScript = readFileSync(join(ROOT, "options/options.js"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
 
   assert.equal(
     optionsScript.includes('window.matchMedia?.("(prefers-color-scheme: dark)")'),
@@ -42,7 +42,7 @@ test("options script resolves system theme and updates the theme toggle icon", (
 });
 
 test("options script persists theme toggle without saving unrelated form edits", () => {
-  const optionsScript = readFileSync(join(ROOT, "options/options.js"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
 
   assert.equal(optionsScript.includes("const storedSettings = await loadSettings();"), true);
   assert.equal(
@@ -52,7 +52,7 @@ test("options script persists theme toggle without saving unrelated form edits",
 });
 
 test("options page requests optional origin permission for custom LibreTranslate endpoint", () => {
-  const optionsScript = readFileSync(join(ROOT, "options/options.js"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
 
   assert.equal(optionsScript.includes("function getEndpointOriginPattern"), true);
   assert.equal(optionsScript.includes("chrome.permissions?.request"), true);

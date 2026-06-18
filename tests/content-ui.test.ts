@@ -6,7 +6,7 @@ import { join } from "node:path";
 const ROOT = new URL("..", import.meta.url).pathname;
 
 test("translation panel avoids semantic page tags that inherit site styles", () => {
-  const contentScript = readFileSync(join(ROOT, "src/content.js"), "utf8");
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
   assert.equal(contentScript.includes('document.createElement("section")'), false);
   assert.equal(contentScript.includes("<header"), false);
@@ -16,7 +16,7 @@ test("translation panel avoids semantic page tags that inherit site styles", () 
 });
 
 test("content script guards against stale translation responses", () => {
-  const contentScript = readFileSync(join(ROOT, "src/content.js"), "utf8");
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
   assert.match(contentScript, /let activeTranslationRequestId = 0;/);
   assert.match(contentScript, /const requestId = \+\+activeTranslationRequestId;/);
@@ -24,16 +24,17 @@ test("content script guards against stale translation responses", () => {
 });
 
 test("content script caches settings and listens for storage changes", () => {
-  const contentScript = readFileSync(join(ROOT, "src/content.js"), "utf8");
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
-  assert.match(contentScript, /let cachedSettings = \{ \.\.\.DEFAULT_SETTINGS \};/);
+  assert.match(contentScript, /let cachedSettings: Settings = \{ \.\.\.DEFAULT_SETTINGS \};/);
   assert.match(contentScript, /async function refreshSettings/);
   assert.equal(contentScript.includes("chrome.storage.onChanged.addListener"), true);
   assert.equal(contentScript.includes("changes?.targetLanguage"), true);
+  assert.equal(contentScript.includes("cachedSettings = mergeSettings"), true);
 });
 
 test("selection toolbar uses the extension icon instead of a Yandex-like letter", () => {
-  const contentScript = readFileSync(join(ROOT, "src/content.js"), "utf8");
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
   assert.equal(contentScript.includes('badge.textContent = "Y"'), false);
   assert.equal(contentScript.includes('chrome.runtime.getURL("assets/icon-32.png")'), true);

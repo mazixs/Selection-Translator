@@ -1,11 +1,20 @@
 {
   "name": "selection-translator-extension",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "verify": "npm test",
-    "pack": "mkdir -p outputs && zip -r -FS outputs/selection-translator-extension.zip manifest.json src options popup assets package.json README.md LICENSE"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "build": "tsx scripts/build.ts",
+    "verify": "npm run typecheck && npm test && npm run build",
+    "pack": "npm run build && mkdir -p outputs && rm -f outputs/selection-translator-extension.zip && cd dist && zip -r ../outputs/selection-translator-extension.zip ."
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.43",
+    "@types/node": "^25.9.3",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
   }
 }

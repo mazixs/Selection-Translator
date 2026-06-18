@@ -1,32 +1,70 @@
-(() => {
-  const DEFAULT_SETTINGS = {
-    provider: "google",
-    targetLanguage: "ru",
-    sourceLanguage: "auto",
-    endpoint: "",
-    apiKey: "",
-    yandexFolderId: "",
-    autoDetectSource: true,
-    showSelectionToolbar: true,
-    keepPanelOpen: false,
-    maxCharacters: 5000,
-  };
+import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
+import { shouldRefreshSelectionForKey } from "./keyboard.js";
+import {
+  DEFAULT_SETTINGS,
+  mergeSettings,
+  type Settings,
+  type SettingsInput,
+} from "./settings.js";
+import type { TranslationResult } from "./translator.js";
 
+(() => {
   const ROOT_ID = "selection-translator-root";
   const HIDDEN_CLASS = "stx-hidden";
   const UI_Z_INDEX = 2147483647;
 
-  let root;
-  let toolbar;
-  let panel;
-  let currentSelection = null;
+  type ToolbarAction =
+    | "translate"
+    | "copy-selected"
+    | "copy-translation"
+    | "settings"
+    | "close";
+  type PanelState = "loading" | "ready" | "error";
+  type UsefulRect = Pick<DOMRect, "left" | "right" | "top" | "bottom" | "width" | "height">;
+  type SelectionSnapshot = {
+    text: string;
+    rect: UsefulRect;
+  };
+
+  let root: HTMLDivElement | null = null;
+  let toolbar: HTMLDivElement | null = null;
+  let panel: HTMLDivElement | null = null;
+  let currentSelection: SelectionSnapshot | null = null;
   let currentTranslation = "";
-  let selectionTimer = 0;
+  let selectionTimer: ReturnType<typeof setTimeout> | undefined;
   let ignoreSelectionUntil = 0;
   let activeTranslationRequestId = 0;
-  let cachedSettings = { ...DEFAULT_SETTINGS };
+  let cachedSettings: Settings = { ...DEFAULT_SETTINGS };
 
-  function sendMessage(message) {
+  function isHTMLElement(target: EventTarget | null): target is HTMLElement {
+    return target instanceof HTMLElement;
+  }
+
+  function getRequiredElement<T extends Element>(
+    parent: ParentNode,
+    selector: string,
+    constructor: { new (...args: never[]): T },
+  ): T {
+    const element = parent.querySelector(selector);
+
+    if (!(element instanceof constructor)) {
+      throw new Error(`Missing required element: ${selector}`);
+    }
+
+    return element;
+  }
+
+  function getToolbarAction(action: string | undefined): ToolbarAction | null {
+    return action === "translate" ||
+      action === "copy-selected" ||
+      action === "copy-translation" ||
+      action === "settings" ||
+      action === "close"
+      ? action
+      : null;
+  }
+
+  function sendMessage<TResponse>(message: RuntimeMessage): Promise<TResponse | null> {
     return new Promise((resolve) => {
       if (!globalThis.chrome?.runtime?.sendMessage) {
         resolve(null);
@@ -44,17 +82,17 @@
     });
   }
 
-  async function refreshSettings() {
-    const settings = await sendMessage({ type: "ST_GET_SETTINGS" });
+  async function refreshSettings(): Promise<Settings> {
+    const settings = await sendMessage<Settings>({ type: "ST_GET_SETTINGS" });
     cachedSettings = { ...DEFAULT_SETTINGS, ...(settings || {}) };
     return cachedSettings;
   }
 
-  function getSettings() {
+  function getSettings(): Settings {
     return cachedSettings;
   }
 
-  function ensureRoot() {
+  function ensureRoot(): HTMLDivElement {
     if (root && document.documentElement.contains(root)) {
       return root;
     }
@@ -67,7 +105,8 @@
       (event) => {
         event.stopPropagation();
 
-        if (!["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(event.target.tagName)) {
+        const tagName = isHTMLElement(event.target) ? event.target.tagName : "";
+        if (!["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tagName)) {
           event.preventDefault();
         }
       },
@@ -78,7 +117,11 @@
     return root;
   }
 
-  function createButton(label, action, title = label) {
+  function createButton(
+    label: string,
+    action: ToolbarAction,
+    title = label,
+  ): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "stx-button";
@@ -88,8 +131,8 @@
     return button;
   }
 
-  function ensureToolbar() {
-    ensureRoot();
+  function ensureToolbar(): HTMLDivElement {
+    const nextRoot = ensureRoot();
 
     if (toolbar) {
       return toolbar;
@@ -104,22 +147,31 @@
     toolbar.append(createIconButton("⇄", "copy-translation", "Скопировать перевод"));
     toolbar.append(createIconButton("⋮", "settings", "Настройки"));
     toolbar.append(createIconButton("×", "close", "Закрыть"));
-    root.append(toolbar);
+    nextRoot.append(toolbar);
 
     toolbar.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-action]");
+      if (!isHTMLElement(event.target)) {
+        return;
+      }
+
+      const button = event.target.closest<HTMLButtonElement>("button[data-action]");
       if (!button) {
         return;
       }
 
+      const action = getToolbarAction(button.dataset.action);
+      if (!action) {
+        return;
+      }
+
       ignoreSelectionUntil = Date.now() + 400;
-      handleToolbarAction(button.dataset.action);
+      void handleToolbarAction(action);
     });
 
     return toolbar;
   }
 
-  function createBadge() {
+  function createBadge(): HTMLSpanElement {
     const badge = document.createElement("span");
     badge.className = "stx-badge";
     badge.title = "Selection Translator";
@@ -134,15 +186,19 @@
     return badge;
   }
 
-  function createIconButton(label, action, title) {
+  function createIconButton(
+    label: string,
+    action: ToolbarAction,
+    title: string,
+  ): HTMLButtonElement {
     const button = createButton(label, action, title);
     button.classList.add("stx-icon-button");
     button.setAttribute("aria-label", title);
     return button;
   }
 
-  function ensurePanel() {
-    ensureRoot();
+  function ensurePanel(): HTMLDivElement {
+    const nextRoot = ensureRoot();
 
     if (panel) {
       return panel;
@@ -181,21 +237,29 @@
       </div>
     `;
 
-    root.append(panel);
+    nextRoot.append(panel);
 
-    panel.querySelector(".stx-panel-close").addEventListener("click", hidePanel);
-    panel.querySelector(".stx-panel-copy").addEventListener("click", copyTranslation);
-    panel
-      .querySelector(".stx-copy-translation")
-      .addEventListener("click", copyTranslation);
-    panel
-      .querySelector(".stx-language-select")
-      .addEventListener("change", handleLanguageChange);
+    getRequiredElement(panel, ".stx-panel-close", HTMLButtonElement).addEventListener(
+      "click",
+      hidePanel,
+    );
+    getRequiredElement(panel, ".stx-panel-copy", HTMLButtonElement).addEventListener(
+      "click",
+      copyTranslation,
+    );
+    getRequiredElement(panel, ".stx-copy-translation", HTMLButtonElement).addEventListener(
+      "click",
+      copyTranslation,
+    );
+    getRequiredElement(panel, ".stx-language-select", HTMLSelectElement).addEventListener(
+      "change",
+      handleLanguageChange,
+    );
 
     return panel;
   }
 
-  function getSelectionSnapshot(forcedText = "") {
+  function getSelectionSnapshot(forcedText = ""): SelectionSnapshot | null {
     const selection = window.getSelection();
     const text = String(forcedText || selection?.toString() || "").trim();
 
@@ -203,7 +267,7 @@
       return null;
     }
 
-    let rect = null;
+    let rect: UsefulRect | null = null;
 
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -216,20 +280,20 @@
     };
   }
 
-  function getUsefulRect(range) {
+  function getUsefulRect(range: Range): UsefulRect | null {
     const rects = [...range.getClientRects()].filter(
       (rect) => rect.width > 0 && rect.height > 0,
     );
 
     if (rects.length > 0) {
-      return rects[rects.length - 1];
+      return rects[rects.length - 1] ?? null;
     }
 
     const rect = range.getBoundingClientRect();
     return rect.width > 0 || rect.height > 0 ? rect : null;
   }
 
-  function getCenteredRect() {
+  function getCenteredRect(): UsefulRect {
     return {
       left: window.innerWidth / 2 - 80,
       right: window.innerWidth / 2 + 80,
@@ -240,7 +304,7 @@
     };
   }
 
-  async function updateSelectionFromPage() {
+  async function updateSelectionFromPage(): Promise<void> {
     if (Date.now() < ignoreSelectionUntil) {
       return;
     }
@@ -271,20 +335,24 @@
     selectionTimer = setTimeout(updateSelectionFromPage, 80);
   }
 
-  function showToolbar(rect) {
+  function showToolbar(rect: UsefulRect) {
     const nextToolbar = ensureToolbar();
     nextToolbar.classList.remove(HIDDEN_CLASS);
     setButtonEnabled("copy-translation", false);
     positionElement(nextToolbar, rect, "toolbar");
   }
 
-  function showPanel(rect) {
+  function showPanel(rect: UsefulRect) {
     const nextPanel = ensurePanel();
     nextPanel.classList.remove(HIDDEN_CLASS);
     positionElement(nextPanel, rect, "panel");
   }
 
-  function positionElement(element, rect, mode) {
+  function positionElement(
+    element: HTMLElement,
+    rect: UsefulRect,
+    mode: "toolbar" | "panel",
+  ) {
     element.style.position = "fixed";
     element.style.left = "0px";
     element.style.top = "0px";
@@ -330,21 +398,23 @@
     hidePanel();
   }
 
-  function setPanelState(kind, text, note = "") {
+  function setPanelState(kind: PanelState, text: string, note = "") {
     const nextPanel = ensurePanel();
     nextPanel.dataset.state = kind;
-    nextPanel.querySelector(".stx-panel-text").textContent = text;
-    nextPanel.querySelector(".stx-panel-note").textContent = note;
+    getRequiredElement(nextPanel, ".stx-panel-text", HTMLDivElement).textContent = text;
+    getRequiredElement(nextPanel, ".stx-panel-note", HTMLDivElement).textContent = note;
   }
 
-  function setButtonEnabled(action, enabled) {
-    const button = toolbar?.querySelector(`[data-action="${action}"]`);
+  function setButtonEnabled(action: ToolbarAction, enabled: boolean) {
+    const button = toolbar?.querySelector<HTMLButtonElement>(
+      `[data-action="${action}"]`,
+    );
     if (button) {
       button.disabled = !enabled;
     }
   }
 
-  async function handleToolbarAction(action) {
+  async function handleToolbarAction(action: ToolbarAction) {
     if (action === "translate") {
       await openTranslationPanel();
       return;
@@ -384,10 +454,14 @@
     setButtonEnabled("copy-translation", false);
 
     const settings = getSettings();
-    const languageSelect = ensurePanel().querySelector(".stx-language-select");
+    const languageSelect = getRequiredElement(
+      ensurePanel(),
+      ".stx-language-select",
+      HTMLSelectElement,
+    );
     languageSelect.value = settings.targetLanguage || DEFAULT_SETTINGS.targetLanguage;
 
-    const result = await sendMessage({
+    const result = await sendMessage<TranslationResult>({
       type: "ST_TRANSLATE",
       text: snapshot.text,
     });
@@ -434,7 +508,7 @@
     flashPanel("Перевод скопирован");
   }
 
-  async function copyText(text) {
+  async function copyText(text: unknown) {
     const value = String(text || "");
     if (!value) {
       return;
@@ -456,8 +530,10 @@
     textarea.remove();
   }
 
-  function flashToolbar(message) {
-    const translateButton = toolbar?.querySelector('[data-action="translate"]');
+  function flashToolbar(message: string) {
+    const translateButton = toolbar?.querySelector<HTMLButtonElement>(
+      '[data-action="translate"]',
+    );
     if (!translateButton) {
       return;
     }
@@ -469,8 +545,8 @@
     }, 900);
   }
 
-  function flashPanel(message) {
-    const note = panel?.querySelector(".stx-panel-note");
+  function flashPanel(message: string) {
+    const note = panel?.querySelector<HTMLDivElement>(".stx-panel-note");
     if (!note) {
       return;
     }
@@ -482,7 +558,11 @@
     }, 1200);
   }
 
-  async function handleLanguageChange(event) {
+  async function handleLanguageChange(event: Event) {
+    if (!(event.target instanceof HTMLSelectElement)) {
+      return;
+    }
+
     const targetLanguage = event.target.value;
     const currentSettings = getSettings();
     cachedSettings = {
@@ -498,15 +578,17 @@
     }
   }
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.type === "ST_CONTEXT_TRANSLATE") {
-      void openTranslationPanel(message.text || "");
+  chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+    const runtimeMessage = getRuntimeMessage(message);
+
+    if (runtimeMessage?.type === "ST_CONTEXT_TRANSLATE") {
+      void openTranslationPanel(runtimeMessage.text);
       sendResponse({ ok: true });
       return true;
     }
 
-    if (message?.type === "ST_CONTEXT_COPY_SELECTION") {
-      void copySelectedText(message.text || "");
+    if (runtimeMessage?.type === "ST_CONTEXT_COPY_SELECTION") {
+      void copySelectedText(runtimeMessage.text);
       sendResponse({ ok: true });
       return true;
     }
@@ -517,7 +599,7 @@
   document.addEventListener("selectionchange", scheduleSelectionUpdate);
   document.addEventListener("mouseup", scheduleSelectionUpdate);
   document.addEventListener("keyup", (event) => {
-    if (event.key.startsWith("Arrow") || event.key === "Shift") {
+    if (shouldRefreshSelectionForKey(event.key)) {
       scheduleSelectionUpdate();
     }
   });
@@ -533,15 +615,20 @@
         return;
       }
 
-      cachedSettings = {
+      const changedSettings = Object.fromEntries(
+        Object.entries(changes).map(([key, change]) => [key, change.newValue]),
+      ) as SettingsInput;
+      cachedSettings = mergeSettings({
         ...cachedSettings,
-        ...Object.fromEntries(
-          Object.entries(changes).map(([key, change]) => [key, change.newValue]),
-        ),
-      };
+        ...changedSettings,
+      });
 
       if (changes?.targetLanguage && panel && !panel.classList.contains(HIDDEN_CLASS)) {
-        const languageSelect = panel.querySelector(".stx-language-select");
+        const languageSelect = getRequiredElement(
+          panel,
+          ".stx-language-select",
+          HTMLSelectElement,
+        );
         languageSelect.value = cachedSettings.targetLanguage;
       }
     });

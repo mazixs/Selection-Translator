@@ -1,15 +1,10 @@
+import { MENU_IDS, setupContextMenus } from "./context-menus.js";
+import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import { loadSettings } from "./settings.js";
 import { translateText } from "./translator.js";
 
-const MENU_IDS = Object.freeze({
-  parent: "selection-translator-parent",
-  translate: "selection-translator-translate",
-  copy: "selection-translator-copy",
-  settings: "selection-translator-settings",
-});
-
 const YANDEX_WEB_HEADER_RULE_IDS = [7401, 7402];
-const YANDEX_WEB_HEADER_RULES = [
+const YANDEX_WEB_HEADER_RULES: chrome.declarativeNetRequest.Rule[] = [
   {
     id: 7401,
     priority: 1,
@@ -58,37 +53,6 @@ const YANDEX_WEB_HEADER_RULES = [
   },
 ];
 
-function createContextMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: MENU_IDS.parent,
-      title: "Перевод",
-      contexts: ["selection"],
-    });
-
-    chrome.contextMenus.create({
-      id: MENU_IDS.translate,
-      parentId: MENU_IDS.parent,
-      title: "Перевести",
-      contexts: ["selection"],
-    });
-
-    chrome.contextMenus.create({
-      id: MENU_IDS.copy,
-      parentId: MENU_IDS.parent,
-      title: "Скопировать",
-      contexts: ["selection"],
-    });
-
-    chrome.contextMenus.create({
-      id: MENU_IDS.settings,
-      parentId: MENU_IDS.parent,
-      title: "Настройки",
-      contexts: ["selection"],
-    });
-  });
-}
-
 async function configureYandexWebHeaderRules() {
   if (!chrome.declarativeNetRequest?.updateDynamicRules) {
     return;
@@ -104,7 +68,11 @@ async function configureYandexWebHeaderRules() {
   }
 }
 
-async function sendToTab(tabId, message) {
+function logContextMenuSetupError(error: unknown) {
+  console.warn("Failed to configure context menus", error);
+}
+
+async function sendToTab(tabId: number | undefined, message: RuntimeMessage) {
   if (!tabId) {
     return;
   }
@@ -117,12 +85,12 @@ async function sendToTab(tabId, message) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  createContextMenus();
+  void setupContextMenus().catch(logContextMenuSetupError);
   void configureYandexWebHeaderRules();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  createContextMenus();
+  void setupContextMenus().catch(logContextMenuSetupError);
   void configureYandexWebHeaderRules();
 });
 
@@ -148,12 +116,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "ST_TRANSLATE") {
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  const runtimeMessage = getRuntimeMessage(message);
+
+  if (runtimeMessage?.type === "ST_TRANSLATE") {
     (async () => {
       const settings = await loadSettings();
       const result = await translateText({
-        text: message.text || "",
+        text: runtimeMessage.text,
         settings,
       });
       sendResponse(result);
@@ -162,7 +132,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "ST_GET_SETTINGS") {
+  if (runtimeMessage?.type === "ST_GET_SETTINGS") {
     (async () => {
       sendResponse(await loadSettings());
     })();
@@ -170,7 +140,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "ST_OPEN_OPTIONS") {
+  if (runtimeMessage?.type === "ST_OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
     return true;

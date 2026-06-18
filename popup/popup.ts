@@ -1,6 +1,6 @@
 import { loadSettings } from "../src/settings.js";
 
-const LANGUAGE_NAMES = {
+const LANGUAGE_NAMES: Partial<Record<string, string>> = {
   ru: "Русский",
   en: "Английский",
   de: "Немецкий",
@@ -11,10 +11,23 @@ const LANGUAGE_NAMES = {
   uk: "Украинский",
 };
 
-const statusLine = document.querySelector("#status-line");
-const targetLanguage = document.querySelector("#target-language");
-const providerStatus = document.querySelector("#provider-status");
-const openOptions = document.querySelector("#open-options");
+function getRequiredElement<T extends Element>(
+  selector: string,
+  constructor: { new (...args: never[]): T },
+): T {
+  const element = document.querySelector(selector);
+
+  if (!(element instanceof constructor)) {
+    throw new Error(`Missing required element: ${selector}`);
+  }
+
+  return element;
+}
+
+const statusLine = getRequiredElement("#status-line", HTMLParagraphElement);
+const targetLanguage = getRequiredElement("#target-language", HTMLElement);
+const providerStatus = getRequiredElement("#provider-status", HTMLElement);
+const openOptions = getRequiredElement("#open-options", HTMLButtonElement);
 
 const settings = await loadSettings();
 

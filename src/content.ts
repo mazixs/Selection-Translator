@@ -40,6 +40,10 @@ import type { TranslationResult } from "./translator.js";
     return target instanceof HTMLElement;
   }
 
+  function isTrustedUserEvent(event: Event): boolean {
+    return event.isTrusted === true;
+  }
+
   function getRequiredElement<T extends Element>(
     parent: ParentNode,
     selector: string,
@@ -150,6 +154,10 @@ import type { TranslationResult } from "./translator.js";
     nextRoot.append(toolbar);
 
     toolbar.addEventListener("click", (event) => {
+      if (!isTrustedUserEvent(event)) {
+        return;
+      }
+
       if (!isHTMLElement(event.target)) {
         return;
       }
@@ -241,15 +249,33 @@ import type { TranslationResult } from "./translator.js";
 
     getRequiredElement(panel, ".stx-panel-close", HTMLButtonElement).addEventListener(
       "click",
-      hidePanel,
+      (event) => {
+        if (!isTrustedUserEvent(event)) {
+          return;
+        }
+
+        hidePanel();
+      },
     );
     getRequiredElement(panel, ".stx-panel-copy", HTMLButtonElement).addEventListener(
       "click",
-      copyTranslation,
+      (event) => {
+        if (!isTrustedUserEvent(event)) {
+          return;
+        }
+
+        void copyTranslation();
+      },
     );
     getRequiredElement(panel, ".stx-copy-translation", HTMLButtonElement).addEventListener(
       "click",
-      copyTranslation,
+      (event) => {
+        if (!isTrustedUserEvent(event)) {
+          return;
+        }
+
+        void copyTranslation();
+      },
     );
     getRequiredElement(panel, ".stx-language-select", HTMLSelectElement).addEventListener(
       "change",
@@ -559,6 +585,10 @@ import type { TranslationResult } from "./translator.js";
   }
 
   async function handleLanguageChange(event: Event) {
+    if (!isTrustedUserEvent(event)) {
+      return;
+    }
+
     if (!(event.target instanceof HTMLSelectElement)) {
       return;
     }

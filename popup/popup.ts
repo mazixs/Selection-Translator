@@ -36,10 +36,8 @@ targetLanguage.textContent =
 providerStatus.textContent =
   settings.provider === "google"
     ? "Google web"
-    : settings.provider === "yandex-web"
-      ? "Yandex web"
     : settings.provider === "yandex"
-      ? settings.apiKey
+      ? settings.yandexApiKey
         ? "Yandex Cloud"
         : "Yandex: нужен ключ"
       : settings.endpoint

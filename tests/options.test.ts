@@ -59,3 +59,22 @@ test("options page requests optional origin permission for custom LibreTranslate
   assert.equal(optionsScript.includes("provider !== \"libretranslate\""), true);
   assert.equal(optionsScript.includes("origins: [originPattern]"), true);
 });
+
+test("options page uses provider-specific keys and removes Yandex web", () => {
+  const optionsHtml = readFileSync(join(ROOT, "options/options.html"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
+
+  assert.equal(optionsHtml.includes('value="yandex-web"'), false);
+  assert.equal(optionsHtml.includes('name="apiKey"'), false);
+  assert.equal(optionsHtml.includes('name="yandexApiKey"'), true);
+  assert.equal(optionsHtml.includes('name="libreTranslateApiKey"'), true);
+  assert.equal(optionsScript.includes("fields.yandexApiKey.value"), true);
+  assert.equal(optionsScript.includes("fields.libreTranslateApiKey.value"), true);
+});
+
+test("options endpoint permission check rejects credentialed URLs", () => {
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
+
+  assert.equal(optionsScript.includes("url.username"), true);
+  assert.equal(optionsScript.includes("url.password"), true);
+});

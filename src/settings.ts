@@ -1,6 +1,5 @@
 export type TranslationProvider =
   | "google"
-  | "yandex-web"
   | "yandex"
   | "libretranslate";
 
@@ -11,7 +10,8 @@ export type Settings = {
   targetLanguage: string;
   sourceLanguage: string;
   endpoint: string;
-  apiKey: string;
+  yandexApiKey: string;
+  libreTranslateApiKey: string;
   yandexFolderId: string;
   themePreference: ThemePreference;
   autoDetectSource: boolean;
@@ -20,11 +20,14 @@ export type Settings = {
   maxCharacters: number;
 };
 
-export type SettingsInput = Partial<Record<keyof Settings, unknown>>;
+export type SettingsInput = Partial<Record<keyof Settings, unknown>> & {
+  apiKey?: unknown;
+};
 
 type StorageAreaLike = {
-  get(defaults: Settings): Promise<Record<string, unknown>>;
+  get(defaults: SettingsInput): Promise<Record<string, unknown>>;
   set(settings: Settings): Promise<void>;
+  remove?(keys: string | string[]): Promise<void>;
 };
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -32,7 +35,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   targetLanguage: "ru",
   sourceLanguage: "auto",
   endpoint: "",
-  apiKey: "",
+  yandexApiKey: "",
+  libreTranslateApiKey: "",
   yandexFolderId: "",
   themePreference: "system",
   autoDetectSource: true,
@@ -77,8 +81,7 @@ function getOptionalStringSetting(value: unknown): string {
 function getProvider(value: unknown): TranslationProvider {
   return value === "libretranslate" ||
     value === "google" ||
-    value === "yandex" ||
-    value === "yandex-web"
+    value === "yandex"
     ? value
     : DEFAULT_SETTINGS.provider;
 }
@@ -90,9 +93,18 @@ function getThemePreference(value: unknown): ThemePreference {
 }
 
 export function mergeSettings(settings: SettingsInput = {}): Settings {
+  const provider = getProvider(settings.provider);
+  const legacyApiKey = getOptionalStringSetting(settings.apiKey);
+  const yandexApiKey =
+    getOptionalStringSetting(settings.yandexApiKey) ||
+    (provider === "yandex" ? legacyApiKey : "");
+  const libreTranslateApiKey =
+    getOptionalStringSetting(settings.libreTranslateApiKey) ||
+    (provider === "libretranslate" ? legacyApiKey : "");
+
   return {
     ...DEFAULT_SETTINGS,
-    provider: getProvider(settings.provider),
+    provider,
     targetLanguage: getStringSetting(
       settings.targetLanguage,
       DEFAULT_SETTINGS.targetLanguage,
@@ -102,7 +114,8 @@ export function mergeSettings(settings: SettingsInput = {}): Settings {
       DEFAULT_SETTINGS.sourceLanguage,
     ),
     endpoint: getOptionalStringSetting(settings.endpoint),
-    apiKey: getOptionalStringSetting(settings.apiKey),
+    yandexApiKey,
+    libreTranslateApiKey,
     yandexFolderId: getOptionalStringSetting(settings.yandexFolderId),
     themePreference: getThemePreference(settings.themePreference),
     autoDetectSource: Boolean(
@@ -127,7 +140,7 @@ export async function loadSettings(
     return mergeSettings();
   }
 
-  const stored = await storageArea.get(DEFAULT_SETTINGS);
+  const stored = await storageArea.get({ ...DEFAULT_SETTINGS, apiKey: "" });
   return mergeSettings(stored);
 }
 
@@ -142,5 +155,6 @@ export async function saveSettings(
   }
 
   await storageArea.set(settings);
+  await storageArea.remove?.("apiKey");
   return settings;
 }

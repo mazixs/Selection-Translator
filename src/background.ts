@@ -3,73 +3,12 @@ import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import { loadSettings } from "./settings.js";
 import { translateText } from "./translator.js";
 
-const YANDEX_WEB_HEADER_RULE_IDS = [7401, 7402];
-const YANDEX_WEB_HEADER_RULES: chrome.declarativeNetRequest.Rule[] = [
-  {
-    id: 7401,
-    priority: 1,
-    action: {
-      type: "modifyHeaders",
-      requestHeaders: [
-        {
-          header: "Referer",
-          operation: "set",
-          value: "https://translate.yandex.ru/",
-        },
-        {
-          header: "Origin",
-          operation: "set",
-          value: "https://translate.yandex.ru",
-        },
-      ],
-    },
-    condition: {
-      urlFilter: "||translate.yandex.ru/props/api/v1.0/sessions",
-      resourceTypes: ["xmlhttprequest"],
-    },
-  },
-  {
-    id: 7402,
-    priority: 1,
-    action: {
-      type: "modifyHeaders",
-      requestHeaders: [
-        {
-          header: "Referer",
-          operation: "set",
-          value: "https://translate.yandex.ru/",
-        },
-        {
-          header: "Origin",
-          operation: "set",
-          value: "https://translate.yandex.ru",
-        },
-      ],
-    },
-    condition: {
-      urlFilter: "||translate.yandex.net/api/v1/tr.json/translateSentence",
-      resourceTypes: ["xmlhttprequest"],
-    },
-  },
-];
-
-async function configureYandexWebHeaderRules() {
-  if (!chrome.declarativeNetRequest?.updateDynamicRules) {
-    return;
-  }
-
-  try {
-    await chrome.declarativeNetRequest.updateDynamicRules({
-      removeRuleIds: YANDEX_WEB_HEADER_RULE_IDS,
-      addRules: YANDEX_WEB_HEADER_RULES,
-    });
-  } catch (error) {
-    console.warn("Failed to configure Yandex web header rules", error);
-  }
-}
-
 function logContextMenuSetupError(error: unknown) {
   console.warn("Failed to configure context menus", error);
+}
+
+function isTrustedContentSender(sender: chrome.runtime.MessageSender): boolean {
+  return sender.id === chrome.runtime.id && typeof sender.tab?.id === "number";
 }
 
 async function sendToTab(tabId: number | undefined, message: RuntimeMessage) {
@@ -86,12 +25,10 @@ async function sendToTab(tabId: number | undefined, message: RuntimeMessage) {
 
 chrome.runtime.onInstalled.addListener(() => {
   void setupContextMenus().catch(logContextMenuSetupError);
-  void configureYandexWebHeaderRules();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void setupContextMenus().catch(logContextMenuSetupError);
-  void configureYandexWebHeaderRules();
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -116,10 +53,13 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   const runtimeMessage = getRuntimeMessage(message);
+  if (!runtimeMessage || !isTrustedContentSender(sender)) {
+    return false;
+  }
 
-  if (runtimeMessage?.type === "ST_TRANSLATE") {
+  if (runtimeMessage.type === "ST_TRANSLATE") {
     (async () => {
       const settings = await loadSettings();
       const result = await translateText({
@@ -132,7 +72,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     return true;
   }
 
-  if (runtimeMessage?.type === "ST_GET_SETTINGS") {
+  if (runtimeMessage.type === "ST_GET_SETTINGS") {
     (async () => {
       sendResponse(await loadSettings());
     })();
@@ -140,7 +80,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     return true;
   }
 
-  if (runtimeMessage?.type === "ST_OPEN_OPTIONS") {
+  if (runtimeMessage.type === "ST_OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
     return true;

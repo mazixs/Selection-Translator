@@ -77,14 +77,12 @@ test("manifest includes permissions needed for storage, context menu, and provid
   assert.equal(manifest.permissions.includes("contextMenus"), true);
   assert.equal(
     manifest.permissions.includes("declarativeNetRequestWithHostAccess"),
-    true,
+    false,
   );
   assert.equal(hostPermissions.includes("<all_urls>"), false);
   assert.deepEqual([...hostPermissions].sort(), [
     "https://translate.api.cloud.yandex.net/*",
     "https://translate.googleapis.com/*",
-    "https://translate.yandex.net/*",
-    "https://translate.yandex.ru/*",
   ]);
   assert.deepEqual(manifest.optional_host_permissions, [
     "http://*/*",

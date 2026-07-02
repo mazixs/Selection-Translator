@@ -58,25 +58,38 @@ type LibreTranslateBody = {
 
 const YANDEX_TRANSLATE_URL =
   "https://translate.api.cloud.yandex.net/translate/v2/translate";
-const YANDEX_WEB_SESSION_URL =
-  "https://translate.yandex.ru/props/api/v1.0/sessions?srv=tr-text";
-const YANDEX_WEB_TRANSLATE_URL =
-  "https://translate.yandex.net/api/v1/tr.json/translateSentence";
 
 export function normalizeLibreTranslateUrl(endpoint: unknown): string {
-  const trimmed = String(endpoint || "").trim();
+  if (typeof endpoint !== "string") {
+    return "";
+  }
+
+  const trimmed = endpoint.trim();
 
   if (!trimmed) {
     return "";
   }
 
-  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+  try {
+    const url = new URL(trimmed);
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      url.username ||
+      url.password
+    ) {
+      return "";
+    }
 
-  if (withoutTrailingSlash.endsWith("/translate")) {
-    return withoutTrailingSlash;
+    url.hash = "";
+    const pathname = url.pathname.replace(/\/+$/, "");
+    url.pathname = pathname.endsWith("/translate")
+      ? pathname
+      : `${pathname}/translate`;
+
+    return url.toString();
+  } catch {
+    return "";
   }
-
-  return `${withoutTrailingSlash}/translate`;
 }
 
 export function limitTextForTranslation(text: unknown, limit: unknown): LimitedText {
@@ -160,17 +173,6 @@ function getYandexTranslatedText(payload: unknown): string {
   return typeof firstTranslation?.text === "string" ? firstTranslation.text : "";
 }
 
-function getYandexWebTranslatedText(payload: unknown): string {
-  const payloadRecord = getObjectRecord(payload);
-  if (!Array.isArray(payloadRecord?.text)) {
-    return "";
-  }
-
-  return payloadRecord.text
-    .filter((part): part is string => typeof part === "string")
-    .join("\n");
-}
-
 async function translateWithGoogle({
   limited,
   settings,
@@ -235,7 +237,7 @@ async function translateWithYandex({
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Api-Key ${settings.apiKey}`,
+      Authorization: `Api-Key ${settings.yandexApiKey}`,
     },
     body: JSON.stringify(body),
   });
@@ -272,100 +274,6 @@ async function translateWithYandex({
   };
 }
 
-async function translateWithYandexWeb({
-  limited,
-  settings,
-  fetchImpl,
-}: ProviderContext): Promise<TranslationResult> {
-  const sessionResponse = await fetchImpl(YANDEX_WEB_SESSION_URL, {
-    method: "POST",
-    referrer: "https://translate.yandex.ru/",
-    referrerPolicy: "origin",
-    headers: {
-      Referer: "https://translate.yandex.ru/",
-      Origin: "https://translate.yandex.ru",
-    },
-  });
-
-  if (!sessionResponse.ok) {
-    return {
-      ok: false,
-      code: "yandex_web_session_error",
-      message: `Yandex web не выдал сессию: ${sessionResponse.status}.`,
-      originalText: limited.text,
-      wasTrimmed: limited.wasTrimmed,
-    };
-  }
-
-  const sessionPayload = getObjectRecord(await sessionResponse.json());
-  const session = getObjectRecord(sessionPayload?.session);
-  const sessionId = session?.id;
-
-  if (typeof sessionId !== "string" || !sessionId) {
-    return {
-      ok: false,
-      code: "yandex_web_missing_session",
-      message: "Yandex web не вернул id сессии.",
-      originalText: limited.text,
-      wasTrimmed: limited.wasTrimmed,
-    };
-  }
-
-  const body = new URLSearchParams({
-    id: `${sessionId}-0-0`,
-    srv: "tr-text",
-    source_lang: settings.autoDetectSource ? "auto" : settings.sourceLanguage,
-    target_lang: settings.targetLanguage,
-    reason: "auto",
-    format: "text",
-    text: limited.text,
-    options: "0",
-  });
-
-  const response = await fetchImpl(YANDEX_WEB_TRANSLATE_URL, {
-    method: "POST",
-    referrer: "https://translate.yandex.ru/",
-    referrerPolicy: "origin",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Referer: "https://translate.yandex.ru/",
-      Origin: "https://translate.yandex.ru",
-    },
-    body,
-  });
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      code: "provider_error",
-      message: `Yandex web вернул ошибку ${response.status}.`,
-      originalText: limited.text,
-      wasTrimmed: limited.wasTrimmed,
-    };
-  }
-
-  const payload = await response.json();
-  const translatedText = getYandexWebTranslatedText(payload);
-
-  if (!translatedText.trim()) {
-    return {
-      ok: false,
-      code: "empty_provider_response",
-      message: "Yandex web не вернул текст перевода.",
-      originalText: limited.text,
-      wasTrimmed: limited.wasTrimmed,
-    };
-  }
-
-  return {
-    ok: true,
-    translatedText,
-    originalText: limited.text,
-    targetLanguage: settings.targetLanguage,
-    wasTrimmed: limited.wasTrimmed,
-  };
-}
-
 async function translateWithLibreTranslate({
   limited,
   settings,
@@ -379,8 +287,8 @@ async function translateWithLibreTranslate({
     format: "text",
   };
 
-  if (settings.apiKey) {
-    body.api_key = settings.apiKey;
+  if (settings.libreTranslateApiKey) {
+    body.api_key = settings.libreTranslateApiKey;
   }
 
   const response = await fetchImpl(endpoint, {
@@ -456,7 +364,7 @@ export async function translateText({
     };
   }
 
-  if (settings.provider === "yandex" && !settings.apiKey) {
+  if (settings.provider === "yandex" && !settings.yandexApiKey) {
     return {
       ok: false,
       code: "missing_yandex_api_key",
@@ -485,23 +393,18 @@ export async function translateText({
       return await translateWithYandex({ limited, settings, fetchImpl });
     }
 
-    if (settings.provider === "yandex-web") {
-      return await translateWithYandexWeb({ limited, settings, fetchImpl });
-    }
-
     return await translateWithLibreTranslate({
       limited,
       settings,
       endpoint,
       fetchImpl,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
+  } catch {
     return {
       ok: false,
       code: "network_error",
-      message: `Не удалось получить перевод: ${message}`,
+      message:
+        "Не удалось получить перевод. Проверь подключение или настройки провайдера.",
       originalText: limited.text,
       wasTrimmed: limited.wasTrimmed,
     };

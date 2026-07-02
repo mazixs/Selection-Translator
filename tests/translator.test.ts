@@ -32,6 +32,15 @@ test("normalizeLibreTranslateUrl appends translate path to base URL", () => {
   );
 });
 
+test("normalizeLibreTranslateUrl rejects unsafe endpoint URLs", () => {
+  assert.equal(
+    normalizeLibreTranslateUrl("https://user:secret@translate.example.com"),
+    "",
+  );
+  assert.equal(normalizeLibreTranslateUrl("ftp://translate.example.com"), "");
+  assert.equal(normalizeLibreTranslateUrl("not a url"), "");
+});
+
 test("limitTextForTranslation trims text and reports trimming", () => {
   const result = limitTextForTranslation("abcdef", 4);
 
@@ -67,7 +76,8 @@ test("translateText posts LibreTranslate-compatible payload and parses translate
       targetLanguage: "ru",
       sourceLanguage: "en",
       autoDetectSource: false,
-      apiKey: "secret",
+      yandexApiKey: "yandex-secret",
+      libreTranslateApiKey: "libre-secret",
     },
     fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
@@ -91,8 +101,25 @@ test("translateText posts LibreTranslate-compatible payload and parses translate
     source: "en",
     target: "ru",
     format: "text",
-    api_key: "secret",
+    api_key: "libre-secret",
   });
+});
+
+test("translateText rejects credentialed LibreTranslate endpoint before fetch", async () => {
+  const result = await translateText({
+    text: "Hello",
+    settings: {
+      provider: "libretranslate",
+      endpoint: "https://user:secret@translate.example.com",
+      libreTranslateApiKey: "libre-secret",
+    },
+    fetchImpl: async () => {
+      throw new Error("fetch should not be called");
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "missing_endpoint");
 });
 
 test("translateText uses Google web provider by default and parses nested response", async () => {
@@ -141,7 +168,8 @@ test("translateText posts Yandex Cloud payload and parses translations", async (
       targetLanguage: "ru",
       sourceLanguage: "en",
       autoDetectSource: false,
-      apiKey: "yandex-secret",
+      yandexApiKey: "yandex-secret",
+      libreTranslateApiKey: "libre-secret",
       yandexFolderId: "folder-123",
     },
     fetchImpl: async (url, init = {}) => {
@@ -190,7 +218,7 @@ test("translateText asks for Yandex API key before calling provider", async () =
     settings: {
       provider: "yandex",
       targetLanguage: "ru",
-      apiKey: "",
+      yandexApiKey: "",
     },
     fetchImpl: async () => {
       throw new Error("fetch should not be called");
@@ -202,78 +230,22 @@ test("translateText asks for Yandex API key before calling provider", async () =
   assert.match(result.message, /Yandex/i);
 });
 
-test("translateText uses Yandex web session and translateSentence endpoint", async () => {
-  const calls: FetchCall[] = [];
+test("translateText hides raw network error details from the result message", async () => {
   const result = await translateText({
     text: "Hello world",
     settings: {
-      provider: "yandex-web",
+      provider: "libretranslate",
+      endpoint: "https://translate.example.com",
       targetLanguage: "ru",
-      sourceLanguage: "en",
-      autoDetectSource: false,
+      libreTranslateApiKey: "libre-secret",
     },
-    fetchImpl: async (url, init = {}) => {
-      calls.push({ url, init });
-
-      if (String(url).includes("/props/api/v1.0/sessions")) {
-        return {
-          ok: true,
-          status: 200,
-          async json() {
-            return {
-              session: {
-                id: "web-session",
-              },
-            };
-          },
-        };
-      }
-
-      return {
-        ok: true,
-        status: 200,
-        async json() {
-          return {
-            code: 200,
-            lang: "en-ru",
-            text: ["Привет, мир"],
-          };
-        },
-      };
+    fetchImpl: async () => {
+      throw new Error("failed for https://user:secret@translate.example.com");
     },
   });
 
-  const firstCall = getCall(calls, 0);
-  const secondCall = getCall(calls, 1);
-  assert.equal(result.ok, true);
-  assert.equal(result.translatedText, "Привет, мир");
-  assert.equal(
-    firstCall.url,
-    "https://translate.yandex.ru/props/api/v1.0/sessions?srv=tr-text",
-  );
-  assert.equal(firstCall.init.method, "POST");
-  assert.equal(new Headers(firstCall.init.headers).get("Referer"), "https://translate.yandex.ru/");
-  assert.equal(new Headers(firstCall.init.headers).get("Origin"), "https://translate.yandex.ru");
-  assert.equal(firstCall.init.referrer, "https://translate.yandex.ru/");
-  assert.equal(
-    secondCall.url,
-    "https://translate.yandex.net/api/v1/tr.json/translateSentence",
-  );
-  assert.equal(secondCall.init.method, "POST");
-  assert.equal(secondCall.init.referrer, "https://translate.yandex.ru/");
-  assert.equal(new Headers(secondCall.init.headers).get("Referer"), "https://translate.yandex.ru/");
-  assert.equal(new Headers(secondCall.init.headers).get("Origin"), "https://translate.yandex.ru");
-  assert.deepEqual(
-    Object.fromEntries(new URLSearchParams(String(secondCall.init.body))),
-    {
-      id: "web-session-0-0",
-      srv: "tr-text",
-      source_lang: "en",
-      target_lang: "ru",
-      reason: "auto",
-      format: "text",
-      text: "Hello world",
-      options: "0",
-    },
-  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "network_error");
+  assert.equal(result.message.includes("user:secret"), false);
+  assert.equal(result.message.includes("translate.example.com"), false);
 });

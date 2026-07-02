@@ -39,3 +39,24 @@ test("selection toolbar uses the extension icon instead of a Yandex-like letter"
   assert.equal(contentScript.includes('badge.textContent = "Y"'), false);
   assert.equal(contentScript.includes('chrome.runtime.getURL("assets/icon-32.png")'), true);
 });
+
+test("content script ignores synthetic page events for privileged UI actions", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+
+  assert.match(
+    contentScript,
+    /function isTrustedUserEvent\(event: Event\): boolean \{\s+return event\.isTrusted === true;\s+\}/s,
+  );
+  assert.match(
+    contentScript,
+    /toolbar\.addEventListener\("click", \(event\) => \{\s+if \(!isTrustedUserEvent\(event\)\)/s,
+  );
+  assert.match(
+    contentScript,
+    /async function handleLanguageChange\(event: Event\) \{\s+if \(!isTrustedUserEvent\(event\)\)/s,
+  );
+  assert.equal(
+    (contentScript.match(/if \(!isTrustedUserEvent\(event\)\)/g) || []).length >= 4,
+    true,
+  );
+});

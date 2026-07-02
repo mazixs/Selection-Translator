@@ -15,7 +15,8 @@ type SettingsFormControls = HTMLFormControlsCollection & {
   provider: HTMLSelectElement;
   sourceLanguage: HTMLInputElement;
   endpoint: HTMLInputElement;
-  apiKey: HTMLInputElement;
+  yandexApiKey: HTMLInputElement;
+  libreTranslateApiKey: HTMLInputElement;
   yandexFolderId: HTMLInputElement;
   autoDetectSource: HTMLInputElement;
   showSelectionToolbar: HTMLInputElement;
@@ -87,7 +88,8 @@ function fillForm(settings: Settings) {
   fields.provider.value = settings.provider;
   fields.sourceLanguage.value = settings.sourceLanguage;
   fields.endpoint.value = settings.endpoint;
-  fields.apiKey.value = settings.apiKey;
+  fields.yandexApiKey.value = settings.yandexApiKey;
+  fields.libreTranslateApiKey.value = settings.libreTranslateApiKey;
   fields.yandexFolderId.value = settings.yandexFolderId;
   fields.autoDetectSource.checked = settings.autoDetectSource;
   fields.showSelectionToolbar.checked = settings.showSelectionToolbar;
@@ -101,7 +103,8 @@ function readForm(): SettingsInput {
     provider: fields.provider.value,
     sourceLanguage: fields.sourceLanguage.value,
     endpoint: fields.endpoint.value,
-    apiKey: fields.apiKey.value,
+    yandexApiKey: fields.yandexApiKey.value,
+    libreTranslateApiKey: fields.libreTranslateApiKey.value,
     yandexFolderId: fields.yandexFolderId.value,
     themePreference: fields.themePreference.value,
     autoDetectSource: fields.autoDetectSource.checked,
@@ -118,7 +121,11 @@ function getEndpointOriginPattern(endpoint: unknown): string {
 
   try {
     const url = new URL(endpoint);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
+    if (
+      (url.protocol !== "http:" && url.protocol !== "https:") ||
+      url.username ||
+      url.password
+    ) {
       return "";
     }
 

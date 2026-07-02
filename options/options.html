@@ -63,7 +63,6 @@
             <span>Сервис перевода</span>
             <select name="provider">
               <option value="google">Google web, без ключа</option>
-              <option value="yandex-web">Yandex web, экспериментально</option>
               <option value="yandex">Yandex Cloud Translate</option>
               <option value="libretranslate">LibreTranslate endpoint</option>
             </select>
@@ -75,8 +74,13 @@
           </label>
 
           <label class="field">
-            <span>API-ключ</span>
-            <input name="apiKey" type="password" autocomplete="off" placeholder="Нужен для Yandex Cloud">
+            <span>Yandex Cloud API-ключ</span>
+            <input name="yandexApiKey" type="password" autocomplete="off" placeholder="Api-Key">
+          </label>
+
+          <label class="field">
+            <span>LibreTranslate API-ключ</span>
+            <input name="libreTranslateApiKey" type="password" autocomplete="off" placeholder="Если требуется endpoint">
           </label>
 
           <label class="field">

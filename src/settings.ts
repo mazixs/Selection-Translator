@@ -17,6 +17,7 @@ export type Settings = {
   autoDetectSource: boolean;
   showSelectionToolbar: boolean;
   keepPanelOpen: boolean;
+  autoFallbackProvider: boolean;
   maxCharacters: number;
 };
 
@@ -42,6 +43,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   autoDetectSource: true,
   showSelectionToolbar: true,
   keepPanelOpen: false,
+  autoFallbackProvider: true,
   maxCharacters: 5000,
 });
 
@@ -126,6 +128,9 @@ export function mergeSettings(settings: SettingsInput = {}): Settings {
     ),
     keepPanelOpen: Boolean(
       settings.keepPanelOpen ?? DEFAULT_SETTINGS.keepPanelOpen,
+    ),
+    autoFallbackProvider: Boolean(
+      settings.autoFallbackProvider ?? DEFAULT_SETTINGS.autoFallbackProvider,
     ),
     maxCharacters: clampMaxCharacters(
       settings.maxCharacters ?? DEFAULT_SETTINGS.maxCharacters,

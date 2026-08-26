@@ -466,6 +466,19 @@ import type { TranslationResult } from "./translator.js";
     }
   }
 
+  function getPanelNote(result: TranslationResult): string {
+    if (!result.ok) {
+      return "";
+    }
+
+    const notes = [
+      result.note || "",
+      result.wasTrimmed ? "Текст был обрезан по лимиту из настроек." : "",
+    ];
+
+    return notes.filter(Boolean).join(" ");
+  }
+
   async function openTranslationPanel(forcedText = "") {
     const snapshot = getSelectionSnapshot(forcedText) || currentSelection;
     if (!snapshot?.text) {
@@ -512,11 +525,7 @@ import type { TranslationResult } from "./translator.js";
 
     currentTranslation = result.translatedText;
     setButtonEnabled("copy-translation", true);
-    setPanelState(
-      "ready",
-      result.translatedText,
-      result.wasTrimmed ? "Текст был обрезан по лимиту из настроек." : "",
-    );
+    setPanelState("ready", result.translatedText, getPanelNote(result));
   }
 
   async function copySelectedText(forcedText = "") {

@@ -81,6 +81,7 @@ test("manifest includes permissions needed for storage, context menu, and provid
   );
   assert.equal(hostPermissions.includes("<all_urls>"), false);
   assert.deepEqual([...hostPermissions].sort(), [
+    "https://clients5.google.com/*",
     "https://translate.api.cloud.yandex.net/*",
     "https://translate.googleapis.com/*",
   ]);

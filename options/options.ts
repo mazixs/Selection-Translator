@@ -21,6 +21,7 @@ type SettingsFormControls = HTMLFormControlsCollection & {
   autoDetectSource: HTMLInputElement;
   showSelectionToolbar: HTMLInputElement;
   keepPanelOpen: HTMLInputElement;
+  autoFallbackProvider: HTMLInputElement;
   maxCharacters: HTMLInputElement;
 };
 
@@ -94,6 +95,7 @@ function fillForm(settings: Settings) {
   fields.autoDetectSource.checked = settings.autoDetectSource;
   fields.showSelectionToolbar.checked = settings.showSelectionToolbar;
   fields.keepPanelOpen.checked = settings.keepPanelOpen;
+  fields.autoFallbackProvider.checked = settings.autoFallbackProvider;
   fields.maxCharacters.value = String(settings.maxCharacters);
 }
 
@@ -110,6 +112,7 @@ function readForm(): SettingsInput {
     autoDetectSource: fields.autoDetectSource.checked,
     showSelectionToolbar: fields.showSelectionToolbar.checked,
     keepPanelOpen: fields.keepPanelOpen.checked,
+    autoFallbackProvider: fields.autoFallbackProvider.checked,
     maxCharacters: fields.maxCharacters.value,
   };
 }

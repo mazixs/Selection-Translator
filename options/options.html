@@ -29,35 +29,47 @@
         <input type="hidden" name="themePreference" value="system">
 
         <section class="settings-section">
-          <h2>Перевод</h2>
+          <div class="section-head">
+            <h2>Перевод</h2>
+            <p>Куда и с какого языка переводить выделенный текст.</p>
+          </div>
 
-          <label class="field">
-            <span>Язык перевода</span>
-            <select name="targetLanguage">
-              <option value="ru">Русский</option>
-              <option value="en">Английский</option>
-              <option value="de">Немецкий</option>
-              <option value="fr">Французский</option>
-              <option value="es">Испанский</option>
-              <option value="it">Итальянский</option>
-              <option value="tr">Турецкий</option>
-              <option value="uk">Украинский</option>
-            </select>
-          </label>
+          <div class="field-grid">
+            <label class="field">
+              <span>Язык перевода</span>
+              <select name="targetLanguage">
+                <option value="ru">Русский</option>
+                <option value="en">Английский</option>
+                <option value="de">Немецкий</option>
+                <option value="fr">Французский</option>
+                <option value="es">Испанский</option>
+                <option value="it">Итальянский</option>
+                <option value="tr">Турецкий</option>
+                <option value="uk">Украинский</option>
+              </select>
+            </label>
 
-          <label class="field checkbox-field">
+            <label class="field" data-shown-when="manual-source">
+              <span>Исходный язык</span>
+              <input name="sourceLanguage" type="text" placeholder="en" autocomplete="off">
+              <span class="field-hint">Код языка: en, de, tr.</span>
+            </label>
+          </div>
+
+          <label class="switch-field">
             <input type="checkbox" name="autoDetectSource">
-            <span>Автоопределять исходный язык</span>
-          </label>
-
-          <label class="field">
-            <span>Исходный язык, если автоопределение выключено</span>
-            <input name="sourceLanguage" type="text" placeholder="en">
+            <span class="switch-text">
+              <span class="switch-title">Определять язык автоматически</span>
+              <span class="field-hint">Выключи, если сайт смешивает два языка в одном абзаце.</span>
+            </span>
           </label>
         </section>
 
         <section class="settings-section">
-          <h2>Провайдер</h2>
+          <div class="section-head">
+            <h2>Провайдер</h2>
+            <p>Google работает без ключа, остальным нужны свои реквизиты.</p>
+          </div>
 
           <label class="field">
             <span>Сервис перевода</span>
@@ -68,55 +80,112 @@
             </select>
           </label>
 
-          <label class="field">
-            <span>LibreTranslate-compatible endpoint</span>
-            <input name="endpoint" type="url" placeholder="https://translate.example.com">
+          <div class="provider-fields" data-provider="google">
+            <p class="provider-hint">Ключ не нужен. Доступ ограничивается по IP-адресу, поэтому при ошибке 429 выручает второй провайдер из раздела «Надежность».</p>
+          </div>
+
+          <div class="provider-fields" data-provider="yandex">
+            <div class="field-grid">
+              <label class="field">
+                <span>API-ключ Yandex Cloud</span>
+                <input name="yandexApiKey" type="password" autocomplete="off" placeholder="Api-Key">
+              </label>
+
+              <label class="field">
+                <span>Folder id</span>
+                <input name="yandexFolderId" type="text" autocomplete="off" placeholder="b1g...">
+                <span class="field-hint">Нужен, если ключ выдан сервисному аккаунту.</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="provider-fields" data-provider="libretranslate">
+            <div class="field-grid">
+              <label class="field">
+                <span>Endpoint</span>
+                <input name="endpoint" type="url" placeholder="https://translate.example.com">
+                <span class="field-hint">Chrome спросит доступ к этому адресу при сохранении.</span>
+              </label>
+
+              <label class="field">
+                <span>API-ключ</span>
+                <input name="libreTranslateApiKey" type="password" autocomplete="off" placeholder="Если endpoint его требует">
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-head">
+            <h2>Панель на странице</h2>
+            <p>Как всплывающее окно ведет себя поверх сайта.</p>
+          </div>
+
+          <div class="field field-slider">
+            <div class="field-head">
+              <span>Прозрачность панели</span>
+              <output id="opacity-output" class="field-value" for="panelOpacity">100%</output>
+            </div>
+            <input name="panelOpacity" type="range" min="50" max="100" step="5" aria-describedby="opacity-hint">
+            <span class="field-hint" id="opacity-hint">Просвечивает только фон: текст перевода остается контрастным, а страница за панелью размывается.</span>
+
+            <div class="opacity-preview" aria-hidden="true">
+              <div class="preview-page">
+                <span class="preview-line"></span>
+                <span class="preview-line"></span>
+                <span class="preview-line"></span>
+                <span class="preview-line"></span>
+                <span class="preview-line"></span>
+                <span class="preview-line"></span>
+              </div>
+              <div class="preview-panel">
+                <div class="preview-panel-head">Русский</div>
+                <div class="preview-panel-body">Получите более 400 подсказок и веб-сайтов AI</div>
+              </div>
+            </div>
+          </div>
+
+          <label class="switch-field">
+            <input type="checkbox" name="showSelectionToolbar">
+            <span class="switch-text">
+              <span class="switch-title">Показывать кнопки при выделении текста</span>
+              <span class="field-hint">Без них перевод вызывается через контекстное меню.</span>
+            </span>
           </label>
 
-          <label class="field">
-            <span>Yandex Cloud API-ключ</span>
-            <input name="yandexApiKey" type="password" autocomplete="off" placeholder="Api-Key">
-          </label>
-
-          <label class="field">
-            <span>LibreTranslate API-ключ</span>
-            <input name="libreTranslateApiKey" type="password" autocomplete="off" placeholder="Если требуется endpoint">
-          </label>
-
-          <label class="field">
-            <span>Yandex folder id</span>
-            <input name="yandexFolderId" type="text" autocomplete="off" placeholder="b1g...">
+          <label class="switch-field">
+            <input type="checkbox" name="keepPanelOpen">
+            <span class="switch-text">
+              <span class="switch-title">Не закрывать окно перевода при снятии выделения</span>
+            </span>
           </label>
         </section>
 
         <section class="settings-section">
-          <h2>Поведение</h2>
+          <div class="section-head">
+            <h2>Надежность</h2>
+            <p>Что делать, когда провайдер отказал или текст слишком длинный.</p>
+          </div>
 
-          <label class="field checkbox-field">
-            <input type="checkbox" name="showSelectionToolbar">
-            <span>Показывать панель при выделении текста</span>
-          </label>
-
-          <label class="field checkbox-field">
-            <input type="checkbox" name="keepPanelOpen">
-            <span>Не закрывать окно перевода при снятии выделения</span>
-          </label>
-
-          <label class="field checkbox-field">
+          <label class="switch-field">
             <input type="checkbox" name="autoFallbackProvider">
-            <span>Если Google ограничил доступ, переводить через Yandex или свой endpoint</span>
+            <span class="switch-text">
+              <span class="switch-title">Переводить через второго провайдера, когда Google ограничил доступ</span>
+              <span class="field-hint">Сработает, если указан ключ Yandex Cloud или свой endpoint.</span>
+            </span>
           </label>
 
-          <label class="field">
-            <span>Максимум символов для перевода</span>
-            <input name="maxCharacters" type="number" min="100" max="50000" step="100">
+          <label class="field field-compact">
+            <span>Максимум символов за один перевод</span>
+            <input name="maxCharacters" type="number" min="100" max="50000" step="100" inputmode="numeric">
+            <span class="field-hint">Длинное выделение обрезается, и панель об этом предупреждает.</span>
           </label>
         </section>
 
         <footer class="settings-actions">
-          <button type="submit">Сохранить</button>
+          <span id="status" class="status" role="status"></span>
           <button type="button" id="reset-button" class="secondary-button">Сбросить</button>
-          <span id="status" role="status"></span>
+          <button type="submit" id="save-button">Сохранить</button>
         </footer>
       </form>
     </main>

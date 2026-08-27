@@ -78,3 +78,44 @@ test("options endpoint permission check rejects credentialed URLs", () => {
   assert.equal(optionsScript.includes("url.username"), true);
   assert.equal(optionsScript.includes("url.password"), true);
 });
+
+test("options page offers panel opacity with a live preview", () => {
+  const optionsHtml = readFileSync(join(ROOT, "options/options.html"), "utf8");
+  const optionsCss = readFileSync(join(ROOT, "options/options.css"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
+
+  assert.match(optionsHtml, /name="panelOpacity" type="range" min="50" max="100"/);
+  assert.equal(optionsHtml.includes('id="opacity-output"'), true);
+  assert.equal(optionsHtml.includes('class="opacity-preview"'), true);
+  assert.match(optionsCss, /rgb\(255 255 255 \/ var\(--preview-alpha, 1\)\)/);
+  assert.match(optionsScript, /function applyPanelOpacity/);
+  assert.match(optionsScript, /setProperty\(\s*"--preview-alpha"/);
+});
+
+test("options page shows only the fields of the selected provider", () => {
+  const optionsHtml = readFileSync(join(ROOT, "options/options.html"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
+
+  for (const provider of ["google", "yandex", "libretranslate"]) {
+    assert.equal(
+      optionsHtml.includes(`class="provider-fields" data-provider="${provider}"`),
+      true,
+      `${provider} group is present`,
+    );
+  }
+
+  assert.equal(optionsHtml.includes('data-shown-when="manual-source"'), true);
+  assert.match(optionsScript, /function applyDisclosure/);
+  assert.match(optionsScript, /group\.hidden = group\.dataset\.provider !== fields\.provider\.value/);
+  assert.match(optionsScript, /field\.hidden = fields\.autoDetectSource\.checked/);
+});
+
+test("options page keeps the save button honest about unsaved edits", () => {
+  const optionsHtml = readFileSync(join(ROOT, "options/options.html"), "utf8");
+  const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
+
+  assert.equal(optionsHtml.includes('id="save-button"'), true);
+  assert.match(optionsScript, /function setUnsaved/);
+  assert.match(optionsScript, /saveButton\.disabled = !unsaved/);
+  assert.match(optionsScript, /setUnsaved\(false\);/);
+});

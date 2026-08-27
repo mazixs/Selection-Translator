@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  clampPanelOpacity,
   DEFAULT_SETTINGS,
   clampMaxCharacters,
   mergeSettings,
@@ -109,4 +110,15 @@ test("clampMaxCharacters keeps translation limits inside the supported range", (
   assert.equal(clampMaxCharacters(2500), 2500);
   assert.equal(clampMaxCharacters(100000), 50000);
   assert.equal(clampMaxCharacters("not a number"), DEFAULT_SETTINGS.maxCharacters);
+});
+
+test("clampPanelOpacity keeps the panel readable", () => {
+  assert.equal(clampPanelOpacity(100), 100);
+  assert.equal(clampPanelOpacity(72), 72);
+  assert.equal(clampPanelOpacity("65"), 65);
+  assert.equal(clampPanelOpacity(0), 50);
+  assert.equal(clampPanelOpacity(-40), 50);
+  assert.equal(clampPanelOpacity(140), 100);
+  assert.equal(clampPanelOpacity("не число"), DEFAULT_SETTINGS.panelOpacity);
+  assert.equal(mergeSettings({ panelOpacity: 10 }).panelOpacity, 50);
 });

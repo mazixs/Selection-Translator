@@ -1,11 +1,13 @@
 import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import { shouldRefreshSelectionForKey } from "./keyboard.js";
 import {
+  clampPanelOpacity,
   DEFAULT_SETTINGS,
   mergeSettings,
   type Settings,
   type SettingsInput,
 } from "./settings.js";
+import { normalizeSelectionText } from "./text.js";
 import type { TranslationResult } from "./translator.js";
 import {
   isSelectableElement,
@@ -93,6 +95,7 @@ import {
   async function refreshSettings(): Promise<Settings> {
     const settings = await sendMessage<Settings>({ type: "ST_GET_SETTINGS" });
     cachedSettings = { ...DEFAULT_SETTINGS, ...(settings || {}) };
+    applyAppearance();
     return cachedSettings;
   }
 
@@ -131,8 +134,23 @@ import {
       true,
     );
 
+    applyAppearance(root);
     document.documentElement.append(root);
     return root;
+  }
+
+  /**
+   * Only the surface goes translucent: the text, borders and shadows stay
+   * opaque, and the blur keeps the translation readable over a busy page.
+   */
+  function applyAppearance(target: HTMLDivElement | null = root) {
+    if (!target) {
+      return;
+    }
+
+    const opacity = clampPanelOpacity(getSettings().panelOpacity);
+    target.style.setProperty("--stx-alpha", String(opacity / 100));
+    target.dataset.translucent = String(opacity < 100);
   }
 
   function createButton(
@@ -252,6 +270,11 @@ import {
       </div>
       <div class="stx-panel-body">
         <div class="stx-panel-text" aria-live="polite"></div>
+        <div class="stx-skeleton" aria-hidden="true">
+          <div class="stx-skeleton-line"></div>
+          <div class="stx-skeleton-line"></div>
+          <div class="stx-skeleton-line"></div>
+        </div>
         <div class="stx-panel-note"></div>
       </div>
       <div class="stx-panel-footer">
@@ -306,7 +329,7 @@ import {
       return null;
     }
 
-    const text = String(forcedText || selection?.toString() || "").trim();
+    const text = normalizeSelectionText(forcedText || selection?.toString());
 
     if (!text) {
       return null;
@@ -431,7 +454,18 @@ import {
       element.style.left = `${left}px`;
       element.style.top = `${top}px`;
       element.style.visibility = "visible";
+
+      if (mode === "panel") {
+        playEnterAnimation(element);
+      }
     });
+  }
+
+  function playEnterAnimation(element: HTMLElement) {
+    element.classList.remove("stx-enter");
+    // Reading the layout restarts the animation on a repeated open.
+    void element.offsetWidth;
+    element.classList.add("stx-enter");
   }
 
   function hideToolbar() {
@@ -720,6 +754,7 @@ import {
         ...cachedSettings,
         ...changedSettings,
       });
+      applyAppearance();
 
       if (changes?.targetLanguage && panel && !panel.classList.contains(HIDDEN_CLASS)) {
         const languageSelect = getRequiredElement(

@@ -73,8 +73,8 @@ test("panel text can be selected by hand while the toolbar keeps the page select
     contentScript,
     /async function updateSelectionFromPage[\s\S]{0,220}isSelectionInsideUi\(window\.getSelection\(\)\)/,
   );
-  assert.match(contentStyles, /\.stx-panel-text \{\s+cursor: text;/);
-  assert.match(contentStyles, /user-select: text;/);
+  assert.match(contentStyles, /\.stx-panel-text \{[^}]*cursor: text;/);
+  assert.match(contentStyles, /\.stx-panel-text \{[^}]*user-select: text;/);
 });
 
 test("copying falls back to a textarea and reports a failure", () => {
@@ -88,4 +88,36 @@ test("copying falls back to a textarea and reports a failure", () => {
   assert.match(contentScript, /return copyThroughTextarea\(value\);/);
   assert.match(contentScript, /copied = document\.execCommand\("copy"\);/);
   assert.match(contentScript, /Ctrl\+C/);
+});
+
+test("panel surface follows the opacity setting and blurs only when translucent", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const contentStyles = readFileSync(join(ROOT, "src/content.css"), "utf8");
+
+  assert.match(contentScript, /function applyAppearance/);
+  assert.match(contentScript, /setProperty\("--stx-alpha", String\(opacity \/ 100\)\)/);
+  assert.match(contentScript, /dataset\.translucent = String\(opacity < 100\)/);
+  assert.match(contentStyles, /--stx-surface: rgb\(255 255 255 \/ var\(--stx-alpha\)\)/);
+  assert.match(
+    contentStyles,
+    /\[data-translucent="true"\][\s\S]{0,200}backdrop-filter: blur/,
+  );
+});
+
+test("panel shows a skeleton while translating and respects reduced motion", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const contentStyles = readFileSync(join(ROOT, "src/content.css"), "utf8");
+
+  assert.equal(contentScript.includes('class="stx-skeleton"'), true);
+  assert.match(contentStyles, /\[data-state="loading"\] \.stx-skeleton \{/);
+  assert.match(contentStyles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("selection text is normalized before it reaches the provider", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+
+  assert.match(
+    contentScript,
+    /const text = normalizeSelectionText\(forcedText \|\| selection\?\.toString\(\)\);/,
+  );
 });

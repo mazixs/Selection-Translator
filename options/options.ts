@@ -1,4 +1,5 @@
 import {
+  clampPanelOpacity,
   DEFAULT_SETTINGS,
   loadSettings,
   saveSettings,
@@ -22,6 +23,7 @@ type SettingsFormControls = HTMLFormControlsCollection & {
   showSelectionToolbar: HTMLInputElement;
   keepPanelOpen: HTMLInputElement;
   autoFallbackProvider: HTMLInputElement;
+  panelOpacity: HTMLInputElement;
   maxCharacters: HTMLInputElement;
 };
 
@@ -45,7 +47,15 @@ function getRequiredElement<T extends Element>(
 const form = getRequiredElement("#settings-form", HTMLFormElement) as SettingsFormElement;
 const fields = form.elements;
 const resetButton = getRequiredElement("#reset-button", HTMLButtonElement);
+const saveButton = getRequiredElement("#save-button", HTMLButtonElement);
+const opacityOutput = getRequiredElement("#opacity-output", HTMLOutputElement);
 const status = getRequiredElement("#status", HTMLSpanElement);
+const providerGroups = [
+  ...document.querySelectorAll<HTMLElement>(".provider-fields"),
+];
+const manualSourceFields = [
+  ...document.querySelectorAll<HTMLElement>('[data-shown-when="manual-source"]'),
+];
 const themeToggleButton = getRequiredElement("#theme-toggle", HTMLButtonElement);
 const systemThemeQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
 
@@ -96,7 +106,44 @@ function fillForm(settings: Settings) {
   fields.showSelectionToolbar.checked = settings.showSelectionToolbar;
   fields.keepPanelOpen.checked = settings.keepPanelOpen;
   fields.autoFallbackProvider.checked = settings.autoFallbackProvider;
+  fields.panelOpacity.value = String(settings.panelOpacity);
   fields.maxCharacters.value = String(settings.maxCharacters);
+  applyPanelOpacity(settings.panelOpacity);
+  applyDisclosure();
+}
+
+/** The preview shows the real thing: only the surface goes translucent. */
+function applyPanelOpacity(value: unknown) {
+  const opacity = clampPanelOpacity(value);
+  opacityOutput.textContent = `${opacity}%`;
+  document.documentElement.style.setProperty(
+    "--preview-alpha",
+    String(opacity / 100),
+  );
+}
+
+/** Only the chosen provider's credentials are worth showing. */
+function applyDisclosure() {
+  for (const group of providerGroups) {
+    group.hidden = group.dataset.provider !== fields.provider.value;
+  }
+
+  for (const field of manualSourceFields) {
+    field.hidden = fields.autoDetectSource.checked;
+  }
+}
+
+function setUnsaved(unsaved: boolean) {
+  saveButton.disabled = !unsaved;
+
+  if (unsaved) {
+    setStatus("Есть несохраненные изменения", "pending");
+    return;
+  }
+
+  if (status.dataset.state === "pending") {
+    setStatus("");
+  }
 }
 
 function readForm(): SettingsInput {
@@ -113,6 +160,7 @@ function readForm(): SettingsInput {
     showSelectionToolbar: fields.showSelectionToolbar.checked,
     keepPanelOpen: fields.keepPanelOpen.checked,
     autoFallbackProvider: fields.autoFallbackProvider.checked,
+    panelOpacity: fields.panelOpacity.value,
     maxCharacters: fields.maxCharacters.value,
   };
 }
@@ -157,11 +205,21 @@ async function requestLibreTranslatePermission(settings: SettingsInput): Promise
   });
 }
 
-function setStatus(message: string) {
+let statusTimer: ReturnType<typeof setTimeout> | undefined;
+
+function setStatus(message: string, state = "") {
+  clearTimeout(statusTimer);
   status.textContent = message;
-  setTimeout(() => {
+  status.dataset.state = state;
+
+  if (!message || state === "pending") {
+    return;
+  }
+
+  statusTimer = setTimeout(() => {
     if (status.textContent === message) {
       status.textContent = "";
+      status.dataset.state = "";
     }
   }, 1800);
 }
@@ -195,12 +253,29 @@ form.addEventListener("submit", async (event) => {
   const saved = await saveSettings(nextSettings);
   fillForm(saved);
   setStatus("Сохранено");
+  saveButton.disabled = true;
 });
 
 resetButton.addEventListener("click", async () => {
   const saved = await saveSettings(DEFAULT_SETTINGS);
   fillForm(saved);
   setStatus("Сброшено");
+  saveButton.disabled = true;
+});
+
+form.addEventListener("input", (event) => {
+  const target = event.target;
+
+  if (target === fields.panelOpacity) {
+    applyPanelOpacity(fields.panelOpacity.value);
+  }
+
+  if (target === fields.provider || target === fields.autoDetectSource) {
+    applyDisclosure();
+  }
+
+  setUnsaved(true);
 });
 
 fillForm(await loadSettings());
+setUnsaved(false);

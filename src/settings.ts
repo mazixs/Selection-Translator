@@ -18,6 +18,7 @@ export type Settings = {
   showSelectionToolbar: boolean;
   keepPanelOpen: boolean;
   autoFallbackProvider: boolean;
+  panelOpacity: number;
   maxCharacters: number;
 };
 
@@ -44,11 +45,15 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   showSelectionToolbar: true,
   keepPanelOpen: false,
   autoFallbackProvider: true,
+  panelOpacity: 100,
   maxCharacters: 5000,
 });
 
 const MIN_MAX_CHARACTERS = 100;
 const MAX_MAX_CHARACTERS = 50000;
+/** Below half opacity the translation stops being readable over a busy page. */
+export const MIN_PANEL_OPACITY = 50;
+export const MAX_PANEL_OPACITY = 100;
 
 export function clampMaxCharacters(value: unknown): number {
   const parsed = Number(value);
@@ -60,6 +65,19 @@ export function clampMaxCharacters(value: unknown): number {
   return Math.min(
     MAX_MAX_CHARACTERS,
     Math.max(MIN_MAX_CHARACTERS, Math.trunc(parsed)),
+  );
+}
+
+export function clampPanelOpacity(value: unknown): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_SETTINGS.panelOpacity;
+  }
+
+  return Math.min(
+    MAX_PANEL_OPACITY,
+    Math.max(MIN_PANEL_OPACITY, Math.round(parsed)),
   );
 }
 
@@ -131,6 +149,9 @@ export function mergeSettings(settings: SettingsInput = {}): Settings {
     ),
     autoFallbackProvider: Boolean(
       settings.autoFallbackProvider ?? DEFAULT_SETTINGS.autoFallbackProvider,
+    ),
+    panelOpacity: clampPanelOpacity(
+      settings.panelOpacity ?? DEFAULT_SETTINGS.panelOpacity,
     ),
     maxCharacters: clampMaxCharacters(
       settings.maxCharacters ?? DEFAULT_SETTINGS.maxCharacters,

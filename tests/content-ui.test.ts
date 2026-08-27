@@ -60,3 +60,32 @@ test("content script ignores synthetic page events for privileged UI actions", (
     true,
   );
 });
+
+test("panel text can be selected by hand while the toolbar keeps the page selection", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const contentStyles = readFileSync(join(ROOT, "src/content.css"), "utf8");
+
+  assert.match(
+    contentScript,
+    /if \(!isSelectableTarget\(event\.target\)\) \{\s+event\.preventDefault\(\);/s,
+  );
+  assert.match(
+    contentScript,
+    /async function updateSelectionFromPage[\s\S]{0,220}isSelectionInsideUi\(window\.getSelection\(\)\)/,
+  );
+  assert.match(contentStyles, /\.stx-panel-text \{\s+cursor: text;/);
+  assert.match(contentStyles, /user-select: text;/);
+});
+
+test("copying falls back to a textarea and reports a failure", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+
+  assert.match(contentScript, /async function copyText\(text: unknown\): Promise<boolean>/);
+  assert.match(
+    contentScript,
+    /await navigator\.clipboard\.writeText\(value\);\s+return true;\s+\} catch \{/s,
+  );
+  assert.match(contentScript, /return copyThroughTextarea\(value\);/);
+  assert.match(contentScript, /copied = document\.execCommand\("copy"\);/);
+  assert.match(contentScript, /Ctrl\+C/);
+});

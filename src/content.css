@@ -27,6 +27,23 @@
 }
 
 #selection-translator-root .stx-toolbar {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The translation must stay selectable even if the page forbids selection. */
+#selection-translator-root .stx-panel-body,
+#selection-translator-root .stx-panel-text,
+#selection-translator-root .stx-panel-note {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#selection-translator-root .stx-panel-text {
+  cursor: text;
+}
+
+#selection-translator-root .stx-toolbar {
   align-items: center;
   background: #ffffff;
   border: 1px solid rgba(20, 28, 38, 0.08);

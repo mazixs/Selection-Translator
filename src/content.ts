@@ -7,6 +7,10 @@ import {
   type SettingsInput,
 } from "./settings.js";
 import type { TranslationResult } from "./translator.js";
+import {
+  isSelectableElement,
+  isSelectionInsideContainer,
+} from "./ui-selection.js";
 
 (() => {
   const ROOT_ID = "selection-translator-root";
@@ -96,6 +100,14 @@ import type { TranslationResult } from "./translator.js";
     return cachedSettings;
   }
 
+  function isSelectableTarget(target: EventTarget | null): boolean {
+    return isHTMLElement(target) && isSelectableElement(target);
+  }
+
+  function isSelectionInsideUi(selection: Selection | null): boolean {
+    return isSelectionInsideContainer(selection, root);
+  }
+
   function ensureRoot(): HTMLDivElement {
     if (root && document.documentElement.contains(root)) {
       return root;
@@ -109,8 +121,10 @@ import type { TranslationResult } from "./translator.js";
       (event) => {
         event.stopPropagation();
 
-        const tagName = isHTMLElement(event.target) ? event.target.tagName : "";
-        if (!["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tagName)) {
+        // Preventing the default keeps the page selection alive while the
+        // toolbar is clicked, but inside the panel it would block the user
+        // from selecting the translation by hand.
+        if (!isSelectableTarget(event.target)) {
           event.preventDefault();
         }
       },
@@ -287,6 +301,11 @@ import type { TranslationResult } from "./translator.js";
 
   function getSelectionSnapshot(forcedText = ""): SelectionSnapshot | null {
     const selection = window.getSelection();
+
+    if (!forcedText && isSelectionInsideUi(selection)) {
+      return null;
+    }
+
     const text = String(forcedText || selection?.toString() || "").trim();
 
     if (!text) {
@@ -332,6 +351,10 @@ import type { TranslationResult } from "./translator.js";
 
   async function updateSelectionFromPage(): Promise<void> {
     if (Date.now() < ignoreSelectionUntil) {
+      return;
+    }
+
+    if (isSelectionInsideUi(window.getSelection())) {
       return;
     }
 
@@ -530,8 +553,8 @@ import type { TranslationResult } from "./translator.js";
 
   async function copySelectedText(forcedText = "") {
     const text = forcedText || currentSelection?.text || getSelectionSnapshot()?.text || "";
-    await copyText(text);
-    flashToolbar("Скопировано");
+    const copied = await copyText(text);
+    flashToolbar(copied ? "Скопировано" : "Не вышло");
   }
 
   async function copyTranslation() {
@@ -539,30 +562,66 @@ import type { TranslationResult } from "./translator.js";
       return;
     }
 
-    await copyText(currentTranslation);
-    flashPanel("Перевод скопирован");
+    const copied = await copyText(currentTranslation);
+
+    if (copied) {
+      flashPanel("Перевод скопирован");
+      return;
+    }
+
+    flashPanel(
+      "Страница не дала доступ к буферу обмена. Выдели перевод мышью и нажми Ctrl+C.",
+      5_000,
+    );
   }
 
-  async function copyText(text: unknown) {
+  async function copyText(text: unknown): Promise<boolean> {
     const value = String(text || "");
     if (!value) {
-      return;
+      return false;
     }
 
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return;
+      try {
+        await navigator.clipboard.writeText(value);
+        return true;
+      } catch {
+        // Some pages block the clipboard API, so the textarea path stays.
+      }
     }
 
+    return copyThroughTextarea(value);
+  }
+
+  function copyThroughTextarea(value: string): boolean {
     const textarea = document.createElement("textarea");
     textarea.value = value;
+    textarea.setAttribute("aria-hidden", "true");
     textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
     textarea.style.top = "0";
-    document.body.append(textarea);
+    textarea.style.left = "-9999px";
+    textarea.style.opacity = "0";
+    ensureRoot().append(textarea);
+
+    const previousFocus = document.activeElement;
+    textarea.focus();
     textarea.select();
-    document.execCommand("copy");
+
+    let copied = false;
+
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    }
+
     textarea.remove();
+
+    if (previousFocus instanceof HTMLElement) {
+      previousFocus.focus();
+    }
+
+    return copied;
   }
 
   function flashToolbar(message: string) {
@@ -580,7 +639,7 @@ import type { TranslationResult } from "./translator.js";
     }, 900);
   }
 
-  function flashPanel(message: string) {
+  function flashPanel(message: string, durationMs = 1200) {
     const note = panel?.querySelector<HTMLDivElement>(".stx-panel-note");
     if (!note) {
       return;
@@ -590,7 +649,7 @@ import type { TranslationResult } from "./translator.js";
     note.textContent = message;
     setTimeout(() => {
       note.textContent = previous;
-    }, 1200);
+    }, durationMs);
   }
 
   async function handleLanguageChange(event: Event) {

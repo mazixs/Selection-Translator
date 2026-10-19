@@ -116,9 +116,15 @@ test("clampPanelOpacity keeps the panel readable", () => {
   assert.equal(clampPanelOpacity(100), 100);
   assert.equal(clampPanelOpacity(72), 72);
   assert.equal(clampPanelOpacity("65"), 65);
-  assert.equal(clampPanelOpacity(0), 50);
-  assert.equal(clampPanelOpacity(-40), 50);
+  assert.equal(clampPanelOpacity(30), 30);
+  assert.equal(clampPanelOpacity(0), 25);
+  assert.equal(clampPanelOpacity(-40), 25);
   assert.equal(clampPanelOpacity(140), 100);
   assert.equal(clampPanelOpacity("не число"), DEFAULT_SETTINGS.panelOpacity);
-  assert.equal(mergeSettings({ panelOpacity: 10 }).panelOpacity, 50);
+  assert.equal(mergeSettings({ panelOpacity: 10 }).panelOpacity, 25);
+});
+
+test("panel starts translucent by default", () => {
+  assert.equal(DEFAULT_SETTINGS.panelOpacity, 75);
+  assert.equal(mergeSettings({}).panelOpacity, 75);
 });

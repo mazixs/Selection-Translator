@@ -43,10 +43,12 @@ Selection Translator — компактное расширение для Chromi
 
 | Команда | Что делает |
 | --- | --- |
+| `npm run lint` | Проверяет код через Biome: линтер, форматирование и порядок импортов |
+| `npm run lint:fix` | Форматирует код и применяет безопасные исправления Biome |
 | `npm run typecheck` | Проверяет TypeScript в строгом режиме без записи файлов |
 | `npm test` | Запускает тесты через встроенный Node.js test runner и `tsx` |
 | `npm run build` | Собирает рабочее Manifest V3-расширение в `dist/` |
-| `npm run verify` | Запускает typecheck, тесты и сборку |
+| `npm run verify` | Запускает lint, typecheck, тесты и сборку |
 | `npm run pack` | Собирает zip-архив расширения из `dist/` в `outputs/` |
 
 Готовый архив появляется здесь:

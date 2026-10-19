@@ -1,12 +1,7 @@
 #selection-translator-root {
   all: initial;
   color-scheme: light;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 1.35;
   inset: 0;
@@ -39,6 +34,7 @@
 }
 
 #selection-translator-root .stx-hidden {
+  /* biome-ignore lint/complexity/noImportantStyles: no page or panel rule may re-show hidden UI */
   display: none !important;
 }
 
@@ -47,13 +43,6 @@
   background: var(--stx-surface);
   border: 1px solid var(--stx-line);
   pointer-events: auto;
-}
-
-/* Only when the surface lets the page through: the blur keeps text readable. */
-#selection-translator-root[data-translucent="true"] .stx-toolbar,
-#selection-translator-root[data-translucent="true"] .stx-panel {
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
 }
 
 #selection-translator-root .stx-toolbar {
@@ -164,6 +153,13 @@
   width: min(344px, calc(100vw - 24px));
 }
 
+/* Only when the surface lets the page through: the blur keeps text readable. */
+#selection-translator-root[data-translucent="true"] .stx-toolbar,
+#selection-translator-root[data-translucent="true"] .stx-panel {
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
 #selection-translator-root .stx-panel.stx-enter {
   animation: stx-panel-in 170ms var(--stx-ease) both;
 }
@@ -199,8 +195,10 @@
 #selection-translator-root .stx-language-select {
   appearance: none;
   background:
-    linear-gradient(45deg, transparent 50%, currentcolor 50%) right 9px top 12px / 6px 6px no-repeat,
-    linear-gradient(135deg, currentcolor 50%, transparent 50%) right 4px top 12px / 6px 6px no-repeat;
+    linear-gradient(45deg, transparent 50%, currentcolor 50%) right 9px top 12px / 6px 6px
+    no-repeat,
+    linear-gradient(135deg, currentcolor 50%, transparent 50%) right 4px top 12px / 6px
+    6px no-repeat;
   border: 0;
   border-radius: var(--stx-radius-control);
   color: var(--stx-ink);
@@ -281,7 +279,8 @@
 
 #selection-translator-root .stx-skeleton-line {
   animation: stx-shimmer 1.25s linear infinite;
-  background: linear-gradient(
+  background:
+    linear-gradient(
       90deg,
       rgb(19 26 38 / 0.07) 0%,
       rgb(19 26 38 / 0.13) 45%,

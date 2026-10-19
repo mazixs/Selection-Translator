@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import {
   buildAcceptLanguage,
@@ -33,20 +33,19 @@ test("every google route sends the text in a form body, not in the URL", () => {
     assert.ok(request.url.length < 300, `${route.id} keeps the URL short`);
     assert.equal(new URL(request.url).searchParams.has("q"), false);
     assert.equal(new URLSearchParams(request.body).get("q"), text);
-    assert.match(
-      String(request.headers["Content-Type"]),
-      /x-www-form-urlencoded/,
-    );
+    assert.match(String(request.headers["Content-Type"]), /x-www-form-urlencoded/);
     assert.equal(request.headers["Accept-Language"], "ru,ru-RU;q=0.9,en;q=0.8");
   }
 });
 
 test("google route uses auto detection unless a source language is pinned", () => {
-  const route = GOOGLE_ROUTES[0]!;
+  const route = GOOGLE_ROUTES[0];
+  assert.ok(route);
 
   assert.equal(
-    new URL(route.build("Hello", mergeSettings({ sourceLanguage: "en" })).url)
-      .searchParams.get("sl"),
+    new URL(
+      route.build("Hello", mergeSettings({ sourceLanguage: "en" })).url,
+    ).searchParams.get("sl"),
     "auto",
   );
   assert.equal(

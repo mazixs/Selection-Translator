@@ -93,10 +93,7 @@ export function createCooldown({ now = Date.now }: CooldownOptions = {}): Cooldo
 }
 
 /** `Retry-After` arrives either as seconds or as an HTTP date. */
-export function parseRetryAfterMs(
-  headerValue: unknown,
-  now: Clock = Date.now,
-): number {
+export function parseRetryAfterMs(headerValue: unknown, now: Clock = Date.now): number {
   if (typeof headerValue !== "string") {
     return 0;
   }

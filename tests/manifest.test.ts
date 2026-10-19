@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -34,7 +34,9 @@ type ExtensionManifest = {
 };
 
 function readManifest(): ExtensionManifest {
-  return JSON.parse(readFileSync(join(ROOT, "manifest.json"), "utf8")) as ExtensionManifest;
+  return JSON.parse(
+    readFileSync(join(ROOT, "manifest.json"), "utf8"),
+  ) as ExtensionManifest;
 }
 
 function sourcePathForBuiltScript(scriptPath: string): string {
@@ -86,14 +88,8 @@ test("manifest includes permissions needed for storage, context menu, and provid
     "https://translate.api.cloud.yandex.net/*",
     "https://translate.googleapis.com/*",
   ]);
-  assert.deepEqual(manifest.optional_host_permissions, [
-    "http://*/*",
-    "https://*/*",
-  ]);
-  assert.deepEqual(manifest.content_scripts[0].matches, [
-    "http://*/*",
-    "https://*/*",
-  ]);
+  assert.deepEqual(manifest.optional_host_permissions, ["http://*/*", "https://*/*"]);
+  assert.deepEqual(manifest.content_scripts[0].matches, ["http://*/*", "https://*/*"]);
 });
 
 test("manifest exposes the content-script icon asset", () => {

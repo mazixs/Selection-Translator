@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
-import { setupContextMenus, type ContextMenuChromeApi } from "../src/context-menus.js";
+import { type ContextMenuChromeApi, setupContextMenus } from "../src/context-menus.js";
 
 const EXPECTED_MENU_IDS = [
   "selection-translator-parent",
@@ -13,7 +13,7 @@ const EXPECTED_MENU_IDS = [
 function createChromeMock() {
   const createdMenuIds = new Set();
   const duplicateErrors: string[] = [];
-  let currentLastError: chrome.runtime.LastError | undefined = undefined;
+  let currentLastError: chrome.runtime.LastError | undefined;
   let lastErrorReads = 0;
 
   function setLastError(message?: string) {

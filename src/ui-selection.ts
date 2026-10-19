@@ -13,8 +13,7 @@ export type ContainerLike = {
 } | null;
 
 /** Panel areas the user is allowed to select with the mouse. */
-export const SELECTABLE_SELECTOR =
-  ".stx-panel-body, .stx-panel-text, .stx-panel-note";
+export const SELECTABLE_SELECTOR = ".stx-panel-body, .stx-panel-text, .stx-panel-note";
 
 export const EDITABLE_TAGS = ["INPUT", "TEXTAREA", "SELECT", "OPTION"];
 

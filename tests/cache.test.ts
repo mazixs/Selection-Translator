@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import { buildCacheKey, createTranslationCache } from "../src/cache.js";
 
@@ -11,14 +11,8 @@ test("buildCacheKey separates provider and language pair", () => {
     text: "Hello",
   };
 
-  assert.notEqual(
-    buildCacheKey(base),
-    buildCacheKey({ ...base, targetLanguage: "de" }),
-  );
-  assert.notEqual(
-    buildCacheKey(base),
-    buildCacheKey({ ...base, provider: "yandex" }),
-  );
+  assert.notEqual(buildCacheKey(base), buildCacheKey({ ...base, targetLanguage: "de" }));
+  assert.notEqual(buildCacheKey(base), buildCacheKey({ ...base, provider: "yandex" }));
   assert.equal(buildCacheKey(base), buildCacheKey({ ...base }));
 });
 

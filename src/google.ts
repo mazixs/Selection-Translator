@@ -92,9 +92,7 @@ export const GOOGLE_ORIGINS: ReadonlyArray<string> = [
 ];
 
 function joinStrings(values: unknown[]): string {
-  return values
-    .map((value) => (typeof value === "string" ? value : ""))
-    .join("");
+  return values.map((value) => (typeof value === "string" ? value : "")).join("");
 }
 
 /** `dj=1` answers with `{ sentences: [{ trans }] }`. */
@@ -143,9 +141,5 @@ function parseFlatArray(payload: unknown): string {
 }
 
 export function parseGoogleResponse(payload: unknown): string {
-  return (
-    parseSentences(payload) ||
-    parseNestedArray(payload) ||
-    parseFlatArray(payload)
-  );
+  return parseSentences(payload) || parseNestedArray(payload) || parseFlatArray(payload);
 }

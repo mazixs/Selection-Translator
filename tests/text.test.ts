@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import { normalizeSelectionText } from "../src/text.js";
 
@@ -30,10 +30,7 @@ test("normalizeSelectionText collapses column layout into readable lines", () =>
 });
 
 test("normalizeSelectionText joins a word broken by hyphenation", () => {
-  assert.equal(
-    normalizeSelectionText("пере-\nвод готов"),
-    "перевод готов",
-  );
+  assert.equal(normalizeSelectionText("пере-\nвод готов"), "перевод готов");
   assert.equal(normalizeSelectionText("Из-\nмерение"), "Измерение");
 });
 

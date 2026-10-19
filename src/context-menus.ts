@@ -14,7 +14,7 @@ type ContextMenusApi = {
   create(
     properties: chrome.contextMenus.CreateProperties,
     callback?: () => void,
-  ): number | string | void;
+  ): number | string | undefined;
 };
 
 export type ContextMenuChromeApi = {

@@ -3,7 +3,7 @@
 Selection Translator — компактное расширение для Chromium-браузеров, которое переводит выделенный текст прямо на странице. Выделите фрагмент, нажмите `Перевести` или `Скопировать` — результат появится в аккуратной плавающей панели без перехода на отдельный сайт.
 
 <p align="center">
-  <img src="docs/readme/selection-toolbar.png" alt="Плавающая панель Selection Translator" width="410">
+  <img src="docs/images/selection-toolbar.png" alt="Плавающая панель Selection Translator" width="410">
 </p>
 
 Проект сделан как Manifest V3-расширение и подходит для Chrome, Yandex Browser и других Chromium-браузеров, которые поддерживают нужные API расширений.
@@ -103,6 +103,7 @@ git push origin v1.0.0
 | `assets/` | Иконки расширения: SVG-исходники и отрисованные из них PNG. В сборку попадают только файлы, которые расширение загружает |
 | `scripts/` | Сборка TypeScript-исходников в рабочий `dist/` и список ассетов, которые в неё входят |
 | `tests/` | Тесты manifest, состава сборки, UI-скриптов, настроек и переводчиков |
+| `docs/` | Скриншоты для README и проектные спецификации |
 | `.github/workflows/` | CI и CD сценарии GitHub Actions |
 
 ## Провайдеры перевода

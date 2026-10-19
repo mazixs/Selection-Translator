@@ -26,6 +26,13 @@ pnpm-debug.log*
 .cache/
 coverage/
 
+# AI assistant settings and working notes
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+docs/plans/
+docs/superpowers/
+
 # OS and editor files
 .DS_Store
 Thumbs.db

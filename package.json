@@ -10,6 +10,7 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "tsx scripts/build.ts",
     "verify": "npm run lint && npm run typecheck && npm test && npm run build",
+    "release-notes": "tsx scripts/release-notes.ts",
     "pack": "npm run build && mkdir -p outputs && rm -f outputs/selection-translator-extension.zip && cd dist && zip -r ../outputs/selection-translator-extension.zip ."
   },
   "devDependencies": {

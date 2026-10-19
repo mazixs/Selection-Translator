@@ -1,5 +1,7 @@
 # Selection Translator Extension Design
 
+> Status: historical. This is the original design of the first version. The extension has since moved to TypeScript and to the Google web, Yandex Cloud Translate and LibreTranslate providers; the current behavior is described in the [README](../../README.md).
+
 ## Goal
 
 Build a Chrome-compatible browser extension that behaves like a lightweight Yandex-style translation helper: when the user selects text on a page, the extension shows a compact floating action menu near the selection with translation and copy actions. Clicking translate opens a small scrollable translation window on the page.

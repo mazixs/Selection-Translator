@@ -49,6 +49,7 @@ Selection Translator — компактное расширение для Chromi
 | `npm test` | Запускает тесты через встроенный Node.js test runner и `tsx` |
 | `npm run build` | Собирает рабочее Manifest V3-расширение в `dist/` |
 | `npm run verify` | Запускает lint, typecheck, тесты и сборку |
+| `npm run release-notes -- 1.4.0` | Печатает раздел версии из `CHANGELOG.md`: так CD получает текст GitHub Release |
 | `npm run pack` | Собирает zip-архив расширения из `dist/` в `outputs/` |
 
 Готовый архив появляется здесь:
@@ -79,9 +80,12 @@ CD запускается только при отправке git-тега ве
 - приводит короткий тег вида `v1.0` к версии `1.0.0`;
 - сверяет версию тега с `version` в `package.json`;
 - сверяет версию тега с `version` в `manifest.json`;
+- берёт текст релиза из раздела этой версии в `CHANGELOG.md`;
 - запускает проверки;
 - собирает zip-архив;
 - публикует GitHub Release с архивом расширения.
+
+Перед релизом добавьте в `CHANGELOG.md` раздел `## X.Y.Z - ГГГГ-ММ-ДД` для новой версии: его текст станет описанием GitHub Release. Тесты проверяют, что такой раздел есть для версии из `package.json`, а версии в `package.json`, `package-lock.json` и `manifest.json` совпадают.
 
 Пример релиза:
 
@@ -90,18 +94,19 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Если номер тега не совпадает с версиями в `package.json` и `manifest.json`, релиз остановится.
+Если номер тега не совпадает с версиями в `package.json` и `manifest.json`, а также если в `CHANGELOG.md` нет раздела этой версии или он пустой, релиз остановится.
 
 ## Структура проекта
 
 | Путь | Назначение |
 | --- | --- |
+| `CHANGELOG.md` | Журнал изменений по версиям, источник текста GitHub Release |
 | `manifest.json` | Конфигурация Manifest V3 расширения, указывает на JS-файлы в собранном `dist/` |
 | `src/` | TypeScript-код content script, background service worker, настроек и переводчиков |
 | `popup/` | Popup расширения: HTML/CSS и TypeScript entrypoint |
 | `options/` | Страница настроек: HTML/CSS и TypeScript entrypoint |
 | `assets/` | Иконки расширения: SVG-исходники и отрисованные из них PNG. В сборку попадают только файлы, которые расширение загружает |
-| `scripts/` | Сборка TypeScript-исходников в рабочий `dist/` и список ассетов, которые в неё входят |
+| `scripts/` | Сборка TypeScript-исходников в рабочий `dist/`, список ассетов, которые в неё входят, и выборка текста релиза из `CHANGELOG.md` |
 | `tests/` | Тесты manifest, состава сборки, UI-скриптов, настроек и переводчиков |
 | `docs/` | Скриншоты для README и проектные спецификации |
 | `.github/workflows/` | CI и CD сценарии GitHub Actions |

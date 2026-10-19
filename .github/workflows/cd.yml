@@ -56,6 +56,11 @@ jobs:
             exit 1
           fi
 
+          echo "RELEASE_VERSION=${TAG_VERSION}" >> "${GITHUB_ENV}"
+
+      - name: Build release notes from CHANGELOG.md
+        run: npm run --silent release-notes -- "${RELEASE_VERSION}" > "${RUNNER_TEMP}/release-notes.md"
+
       - name: Run tests
         run: npm run verify
 
@@ -70,4 +75,4 @@ jobs:
             outputs/selection-translator-extension.zip \
             --repo "${GITHUB_REPOSITORY}" \
             --title "Selection Translator ${GITHUB_REF_NAME}" \
-            --generate-notes
+            --notes-file "${RUNNER_TEMP}/release-notes.md"

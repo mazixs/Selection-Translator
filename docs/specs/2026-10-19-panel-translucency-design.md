@@ -1,80 +1,80 @@
-# Прозрачность панели и размытие фона
+# Panel translucency and background blur
 
-> Статус: принято 2026-10-19. Описывает текущее решение по прозрачности панели перевода и тулбара, замер нагрузки и практики, на которые оно опирается.
+> Status: accepted on 2026-10-19. Describes the current approach to the translucency of the translation panel and the toolbar, the load measurement, and the practices it relies on.
 
-## Решение
+## Decision
 
-- Фон панели и тулбара — `rgb(255 255 255 / α)`, где α = `panelOpacity / 100`. Настройка задаётся от 25 до 100 процентов, по умолчанию 75.
-- Пока прозрачность меньше 100 процентов, под панелью и тулбаром работает `backdrop-filter: blur(16px) saturate(1.6)`. При 100 процентах фильтр снимается целиком (`data-translucent="false"`).
-- Просвечивает только фон. Текст, рамки и тени остаются плотными.
-- Панель появляется за 170 мс, анимируются только `opacity` и `transform`. Радиус размытия не анимируется. `prefers-reduced-motion` отключает анимацию.
-- Скрытая панель получает `display: none`, поэтому слоя для размытия у неё нет.
+- The background of the panel and the toolbar is `rgb(255 255 255 / α)`, where α = `panelOpacity / 100`. The setting ranges from 25 to 100 percent, 75 by default.
+- While the opacity is below 100 percent, `backdrop-filter: blur(16px) saturate(1.6)` works under the panel and the toolbar. At 100 percent the filter is removed entirely (`data-translucent="false"`).
+- Only the background shows through. Text, borders and shadows stay opaque.
+- The panel appears over 170 ms, and only `opacity` and `transform` are animated. The blur radius is not animated. `prefers-reduced-motion` turns the animation off.
+- A hidden panel gets `display: none`, so it has no layer to blur.
 
-## Почему так
+## Why
 
-- Визуальный ориентир — полупрозрачные материалы Apple: поверхность с размытием показывает контекст страницы и при этом не мешает читать. При 75 процентах перевод хорошо читается на пёстрых страницах, это проверено вручную.
-- Решение о нагрузке остаётся за пользователем. Если машина слабая, ползунок на 100 процентов выключает размытие полностью.
+- The visual reference is Apple's translucent materials: a blurred surface shows the context of the page and still does not get in the way of reading. At 75 percent the translation reads well on busy pages, which was checked by hand.
+- The decision about the load stays with the user. On a weak machine, moving the slider to 100 percent turns the blur off completely.
 
-## Как Chromium считает размытие
+## How Chromium computes the blur
 
-- Элемент с `backdrop-filter` получает отдельную render surface.
-- Размытие пересчитывается только в те кадры, когда меняется что-то под элементом: при прокрутке, видео или анимации на фоне. Размытию нужны соседние пиксели, поэтому любое изменение под панелью расширяет область перерисовки на всю её площадь. На неподвижной странице размытие ничего не стоит.
-- Перед размытием Chromium уменьшает картинку под элементом. Поэтому стоимость определяется в первую очередь площадью, а не радиусом.
-- Главный риск — машины без аппаратного ускорения: виртуальные машины, удалённый рабочий стол, драйвер из блок-листа. Там размытие считает процессор.
+- An element with `backdrop-filter` gets its own render surface.
+- The blur is recomputed only in frames where something under the element changes: on scroll, video or an animation in the background. The blur needs neighboring pixels, so any change under the panel extends the damage area to the panel's full size. On a still page the blur costs nothing.
+- Before blurring, Chromium downscales the picture under the element. So the cost depends first of all on the area, not on the radius.
+- The main risk is machines without hardware acceleration: virtual machines, remote desktop, a blocklisted driver. There the CPU computes the blur.
 
-## Замер
+## Measurement
 
-Дата: 2026-10-19, Chrome 155.
+Date: 2026-10-19, Chrome 155.
 
-**Методика.** Отдельный профиль Chrome в headless-режиме. Страница 1280×900 с текстом, градиентами и плитками. Поверх — фиксированные панели 344×220 с тем же CSS, что в `src/content.css`. Каждый прогон длится 3 секунды: прокрутка на 9 px в каждом `requestAnimationFrame`, записываются интервалы между кадрами. Режимов два:
+**Method.** A separate Chrome profile in headless mode. A 1280×900 page with text, gradients and tiles. On top of it, fixed 344×220 panels with the same CSS as in `src/content.css`. Each run lasts 3 seconds: a 9 px scroll in every `requestAnimationFrame`, recording the intervals between frames. Two modes:
 
-- **GPU:** дискретная видеокарта уровня NVIDIA RTX 5070 Ti, монитор 144 Гц;
-- **без GPU:** `--disable-gpu --disable-gpu-compositing`, композитинг на процессоре с 16 потоками, кадр 60 Гц.
+- **GPU:** a discrete graphics card on the level of an NVIDIA RTX 5070 Ti, a 144 Hz monitor;
+- **no GPU:** `--disable-gpu --disable-gpu-compositing`, compositing on a 16-thread CPU, a 60 Hz frame.
 
-Одна панель закрывает около 6 процентов экрана, а 16 панелей — весь экран.
+One panel covers about 6 percent of the screen, and 16 panels cover the whole screen.
 
-| Сколько размытия на экране | GPU | Без GPU |
+| How much blur is on screen | GPU | No GPU |
 |---|---|---|
-| Без размытия, любое количество панелей | 144 fps | 60 fps |
-| Прозрачность 75 %, без размытия, 16 панелей | 144 fps | 60 fps |
-| 1 панель, наш CSS | 144 fps | 60 fps |
-| 4 панели | 144 fps | 59 fps, один пропущенный кадр |
-| 16 панелей, весь экран | 144 fps | 21 fps |
-| 16 панелей, `blur(16px)` без `saturate` | 144 fps | 22 fps |
-| 16 панелей, `blur(8px) saturate(1.6)` | 144 fps | 23 fps |
-| 48 панелей внахлёст, около трёх экранов | 103 fps | 9 fps |
+| No blur, any number of panels | 144 fps | 60 fps |
+| 75 % opacity, no blur, 16 panels | 144 fps | 60 fps |
+| 1 panel, our CSS | 144 fps | 60 fps |
+| 4 panels | 144 fps | 59 fps, one dropped frame |
+| 16 panels, the whole screen | 144 fps | 21 fps |
+| 16 panels, `blur(16px)` without `saturate` | 144 fps | 22 fps |
+| 16 panels, `blur(8px) saturate(1.6)` | 144 fps | 23 fps |
+| 48 overlapping panels, about three screens | 103 fps | 9 fps |
 
-**Выводы:**
+**Conclusions:**
 
-- На GPU одна панель ничего не стоит. Кадры начинают теряться при площади размытия примерно в 50 раз больше нашей панели.
-- Без GPU одна панель тоже укладывается в кадр. Тормозит размытие на весь экран, а такого в расширении нет.
-- Радиус 8 и 16 px стоят одинаково, `saturate(1.6)` нагрузку не добавляет. Уменьшать радиус ради производительности нет смысла.
+- On a GPU one panel costs nothing. Frames start to drop at a blur area about 50 times larger than our panel.
+- Without a GPU one panel also fits in a frame. Blurring the whole screen is what slows down, and the extension never does that.
+- A radius of 8 and 16 px costs the same, and `saturate(1.6)` adds no load. There is no point in reducing the radius for performance.
 
-**Ограничения:**
+**Limitations:**
 
-- Замер сделан на одной машине с сильным процессором. На слабом ноутбуке без GPU запас меньше.
-- Интервалы `requestAnimationFrame` показывают, успевает ли браузер выдавать кадры, но не точное время работы GPU.
+- The measurement was done on one machine with a strong CPU. On a weak laptop without a GPU the margin is smaller.
+- `requestAnimationFrame` intervals show whether the browser keeps up with frames, but not the exact GPU time.
 
-## Практики
+## Practices
 
-### Применены
+### Applied
 
-1. **Размывать маленькую площадь.** Под размытием только панель и тулбар, не фон всей страницы. Стоимость растёт с площадью.
-2. **Не анимировать размытие.** Радиус постоянный, появление панели анимирует `opacity` и `transform`.
-3. **Не держать слой, когда панель не видна.** Скрытая панель получает `display: none`, `will-change` не используется.
-4. **Не экономить на радиусе.** Замер не показал разницы между 8 и 16 px, поэтому оставлен радиус, который лучше выглядит.
-5. **Дать пользователю выключатель.** 100 процентов прозрачности убирают фильтр целиком.
+1. **Blur a small area.** Only the panel and the toolbar are blurred, not the background of the whole page. The cost grows with the area.
+2. **Do not animate the blur.** The radius is constant, and the panel's appearance animates `opacity` and `transform`.
+3. **Do not keep a layer while the panel is not visible.** A hidden panel gets `display: none`, and `will-change` is not used.
+4. **Do not save on the radius.** The measurement showed no difference between 8 and 16 px, so the radius that looks better stays.
+5. **Give the user a switch.** 100 percent opacity removes the filter entirely.
 
-### Рассмотрены и отложены
+### Considered and postponed
 
-- **`prefers-reduced-transparency: reduce`.** Chrome поддерживает его с версии 118. Запрос срабатывает, когда в Windows выключены «Эффекты прозрачности» или в macOS включено «Уменьшить прозрачность». Системные материалы Apple при этой настройке заменяют размытие сплошным фоном, потому что людям со слабым зрением размытие мешает читать. Сейчас прозрачность управляется ползунком в настройках. Если понадобится учитывать системную настройку, достаточно правила в `src/content.css`: под этим запросом фон делается непрозрачным, а `backdrop-filter` снимается.
-- **Скелет загрузки.** Анимация `stx-shimmer` двигает `background-position`, поэтому каждый кадр требует перерисовки, а под размытием — ещё и пересчёта фильтра. Загрузка обычно короче секунды, поэтому переводить анимацию на `transform` не стали.
+- **`prefers-reduced-transparency: reduce`.** Chrome supports it since version 118. The query matches when "Transparency effects" is off in Windows or "Reduce transparency" is on in macOS. Apple's system materials replace the blur with a solid background under this setting, because the blur makes reading harder for people with low vision. Now translucency is controlled by the slider in the settings. If the system setting needs to be respected, one rule in `src/content.css` is enough: under this query the background becomes opaque and `backdrop-filter` is removed.
+- **The loading skeleton.** The `stx-shimmer` animation moves `background-position`, so every frame needs a repaint, and under the blur also a filter recomputation. Loading is usually shorter than a second, so the animation was not moved to `transform`.
 
-## Источники
+## Sources
 
-- [Chromium Render Surfaces](https://canary.grida.co/docs/wg/research/chromium/render-surfaces) и [Chromium effect optimizations](https://grida.co/docs/wg/research/chromium/effect-optimizations) — разбор исходников компоситора Chromium (`cc/`): отдельная surface для `backdrop-filter`, расширение области перерисовки под размытием, уменьшение входа фильтра. Это вторичный разбор, детали сверены с собственным замером.
-- [W3C FXTF: backdrop-filter и композитная прокрутка](https://lists.w3.org/Archives/Public/public-fxtf-archive/2018Nov/0098.html) — обсуждение спецификации: прокрутка не должна заметно замедляться из-за `backdrop-filter`.
-- [Mozilla Bug 1732817](https://bug635044.bugzilla.mozilla.org/show_bug.cgi?id=1732817) — фиксированные панели с размытием над прокручиваемым контентом тормозят прокрутку на Android. Отключение фильтра снимает проблему, а Chrome справляется с той же страницей заметно лучше.
-- [Red Hat Bug 2395768](https://bugzilla.redhat.com/show_bug.cgi?id=2395768) — `backdrop-filter: blur` тормозит без аппаратного ускорения.
-- [Chrome Developers: CSS prefers-reduced-transparency](https://developer.chrome.com/blog/css-prefers-reduced-transparency) — медиазапрос, поддержка с Chrome 118, связь с системными настройками Windows, macOS и iOS.
-- [WWDC 2018, Session 230](https://developer.apple.com/videos/play/wwdc2018/230) и [SwiftUI: accessible appearance](https://developer.apple.com/documentation/swiftui/accessible-appearance.md) — как системные материалы Apple ведут себя при включённом Reduce Transparency и почему.
+- [Chromium Render Surfaces](https://canary.grida.co/docs/wg/research/chromium/render-surfaces) and [Chromium effect optimizations](https://grida.co/docs/wg/research/chromium/effect-optimizations): an analysis of the Chromium compositor sources (`cc/`): a separate surface for `backdrop-filter`, the extended damage area under a blur, the downscaled filter input. This is a secondary analysis, and the details were checked against our own measurement.
+- [W3C FXTF: backdrop-filter and composited scrolling](https://lists.w3.org/Archives/Public/public-fxtf-archive/2018Nov/0098.html): a discussion of the specification: scrolling should not slow down noticeably because of `backdrop-filter`.
+- [Mozilla Bug 1732817](https://bug635044.bugzilla.mozilla.org/show_bug.cgi?id=1732817): fixed blurred panels over scrolling content slow down scrolling on Android. Turning the filter off removes the problem, and Chrome handles the same page noticeably better.
+- [Red Hat Bug 2395768](https://bugzilla.redhat.com/show_bug.cgi?id=2395768): `backdrop-filter: blur` is slow without hardware acceleration.
+- [Chrome Developers: CSS prefers-reduced-transparency](https://developer.chrome.com/blog/css-prefers-reduced-transparency): the media query, supported since Chrome 118, and its relation to the system settings of Windows, macOS and iOS.
+- [WWDC 2018, Session 230](https://developer.apple.com/videos/play/wwdc2018/230) and [SwiftUI: accessible appearance](https://developer.apple.com/documentation/swiftui/accessible-appearance.md): how Apple's system materials behave with Reduce Transparency on, and why.

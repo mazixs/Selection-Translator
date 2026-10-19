@@ -4,15 +4,25 @@ import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import {
+  getManifestLocaleFiles,
+  getManifestMessages,
+} from "../scripts/manifest-locales.js";
+import { DEFAULT_LOCALE, UI_LOCALES } from "../src/i18n.js";
+
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 type ExtensionManifest = {
   manifest_version: number;
+  name: string;
+  description: string;
+  default_locale: string;
   background: {
     service_worker: string;
   };
   options_page: string;
   action: {
+    default_title: string;
     default_popup: string;
     default_icon: Record<string, string>;
   };
@@ -120,4 +130,46 @@ test("manifest exposes the content-script icon asset", () => {
       matches: ["http://*/*", "https://*/*"],
     },
   ]);
+});
+
+test("manifest texts come from _locales, which the build writes from the catalogs", () => {
+  const manifest = readManifest();
+  const used = [manifest.name, manifest.description, manifest.action.default_title].map(
+    (value) => /^__MSG_(\w+)__$/.exec(value)?.[1],
+  );
+
+  assert.equal(manifest.default_locale, DEFAULT_LOCALE);
+  assert.deepEqual(used, ["extName", "extDescription", "extName"]);
+
+  const files = getManifestLocaleFiles();
+  assert.deepEqual(
+    files.map(({ path }) => path),
+    UI_LOCALES.map((locale) => `_locales/${locale}/messages.json`),
+  );
+
+  for (const locale of UI_LOCALES) {
+    const messages = getManifestMessages(locale);
+
+    for (const key of used) {
+      assert.ok(key && messages[key]?.message, `${locale}: ${key}`);
+    }
+  }
+
+  assert.equal(
+    getManifestMessages("ru").extDescription?.message.includes("перевод"),
+    true,
+  );
+});
+
+test("localized manifest texts fit the Chrome Web Store limits", () => {
+  // developer.chrome.com manifest reference: name up to 75, description up to 132.
+  for (const locale of UI_LOCALES) {
+    const { extName, extDescription } = getManifestMessages(locale);
+
+    assert.ok(extName && extName.message.length <= 75, `${locale}: name`);
+    assert.ok(
+      extDescription && extDescription.message.length <= 132,
+      `${locale}: description`,
+    );
+  }
 });

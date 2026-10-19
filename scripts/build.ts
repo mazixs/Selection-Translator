@@ -1,13 +1,20 @@
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
 
+import { getManifestLocaleFiles } from "./manifest-locales.js";
 import { RUNTIME_ASSETS } from "./runtime-assets.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const DIST = join(ROOT, "dist");
+
+async function writeDistFile(path: string, content: string) {
+  const to = join(DIST, path);
+  await mkdir(dirname(to), { recursive: true });
+  await writeFile(to, content);
+}
 
 async function copyProjectFile(path: string) {
   const from = join(ROOT, path);
@@ -22,6 +29,7 @@ await mkdir(DIST, { recursive: true });
 await Promise.all([
   copyProjectFile("manifest.json"),
   copyProjectFile("README.md"),
+  copyProjectFile("README.ru.md"),
   copyProjectFile("LICENSE"),
   ...RUNTIME_ASSETS.map(copyProjectFile),
   copyProjectFile("src/content.css"),
@@ -29,6 +37,7 @@ await Promise.all([
   copyProjectFile("options/options.css"),
   copyProjectFile("popup/popup.html"),
   copyProjectFile("popup/popup.css"),
+  ...getManifestLocaleFiles().map(({ path, content }) => writeDistFile(path, content)),
 ]);
 
 await build({

@@ -5,7 +5,6 @@ import {
   type Cooldown,
   createCooldown,
   createPacer,
-  formatCooldownHint,
   getBackoffMs,
   type Pacer,
   parseRetryAfterMs,
@@ -34,17 +33,37 @@ export type TranslationSuccess = {
   targetLanguage: string;
   wasTrimmed: boolean;
   provider: TranslationProvider;
-  note?: string;
+  /** The main provider failed with this code, and `provider` stood in. */
+  fallbackFrom?: TranslationErrorCode;
 };
 
+export type TranslationErrorCode =
+  | "empty_text"
+  | "missing_endpoint"
+  | "missing_yandex_api_key"
+  | "fetch_unavailable"
+  | "rate_limited"
+  | "provider_error"
+  | "network_error"
+  | "empty_provider_response";
+
+/**
+ * Failures carry no text: the UI words them in its own language from the
+ * code and the details, see `translation-messages.ts`.
+ */
 export type TranslationFailure = {
   ok: false;
-  code: string;
-  message: string;
+  code: TranslationErrorCode;
   originalText: string;
   wasTrimmed?: boolean;
+  /** The provider behind `provider_error` or `empty_provider_response`. */
+  provider?: TranslationProvider;
+  /** The HTTP status behind `provider_error`. */
+  status?: number;
   retryAfterMs?: number;
 };
+
+type FailureDetails = Pick<TranslationFailure, "provider" | "status" | "retryAfterMs">;
 
 export type TranslationResult = TranslationSuccess | TranslationFailure;
 
@@ -61,7 +80,7 @@ export type TranslateRuntime = {
   cache: TranslationCache<{
     translatedText: string;
     provider: TranslationProvider;
-    note?: string;
+    fallbackFrom?: TranslationErrorCode;
   }>;
   cooldown: Cooldown;
   pacer: Pacer;
@@ -220,7 +239,6 @@ function succeed(
   translatedText: string,
   { limited, settings }: ProviderContext,
   provider: TranslationProvider,
-  note?: string,
 ): TranslationSuccess {
   return {
     ok: true,
@@ -229,22 +247,21 @@ function succeed(
     targetLanguage: settings.targetLanguage,
     wasTrimmed: limited.wasTrimmed,
     provider,
-    ...(note ? { note } : {}),
   };
 }
 
 function fail(
   limited: LimitedText,
-  code: string,
-  message: string,
-  retryAfterMs = 0,
+  code: TranslationErrorCode,
+  { provider, status, retryAfterMs }: FailureDetails = {},
 ): TranslationFailure {
   return {
     ok: false,
     code,
-    message,
     originalText: limited.text,
     wasTrimmed: limited.wasTrimmed,
+    ...(provider ? { provider } : {}),
+    ...(status ? { status } : {}),
     ...(retryAfterMs ? { retryAfterMs } : {}),
   };
 }
@@ -253,14 +270,7 @@ function getRateLimitFailure(
   limited: LimitedText,
   remainingMs: number,
 ): TranslationFailure {
-  return fail(
-    limited,
-    "rate_limited",
-    `Google временно ограничил доступ с этого адреса. Попробуй через ${formatCooldownHint(
-      remainingMs,
-    )}. Если включен VPN, помогает другой узел или Yandex в настройках.`,
-    remainingMs,
-  );
+  return fail(limited, "rate_limited", { retryAfterMs: remainingMs });
 }
 
 async function translateWithGoogle(context: ProviderContext): Promise<TranslationResult> {
@@ -271,11 +281,7 @@ async function translateWithGoogle(context: ProviderContext): Promise<Translatio
     return getRateLimitFailure(limited, cooldownLeft);
   }
 
-  let failure = fail(
-    limited,
-    "network_error",
-    "Не удалось получить перевод. Проверь подключение или настройки провайдера.",
-  );
+  let failure = fail(limited, "network_error");
   let sawRateLimit = false;
   let retryAfterMs = 0;
 
@@ -313,11 +319,7 @@ async function translateWithGoogle(context: ProviderContext): Promise<Translatio
         return succeed(translatedText, context, "google");
       }
 
-      failure = fail(
-        limited,
-        "empty_provider_response",
-        "Переводчик не вернул текст перевода.",
-      );
+      failure = fail(limited, "empty_provider_response", { provider: "google" });
       continue;
     }
 
@@ -332,11 +334,10 @@ async function translateWithGoogle(context: ProviderContext): Promise<Translatio
       );
     }
 
-    failure = fail(
-      limited,
-      "provider_error",
-      `Переводчик вернул ошибку ${response.status}.`,
-    );
+    failure = fail(limited, "provider_error", {
+      provider: "google",
+      status: response.status,
+    });
   }
 
   if (sawRateLimit) {
@@ -376,21 +377,16 @@ async function translateWithYandex(context: ProviderContext): Promise<Translatio
   });
 
   if (!response.ok) {
-    return fail(
-      limited,
-      "provider_error",
-      `Yandex Translate вернул ошибку ${response.status}.`,
-    );
+    return fail(limited, "provider_error", {
+      provider: "yandex",
+      status: response.status,
+    });
   }
 
   const translatedText = getYandexTranslatedText(await response.json());
 
   if (!translatedText.trim()) {
-    return fail(
-      limited,
-      "empty_provider_response",
-      "Yandex Translate не вернул текст перевода.",
-    );
+    return fail(limited, "empty_provider_response", { provider: "yandex" });
   }
 
   return succeed(translatedText, context, "yandex");
@@ -422,21 +418,16 @@ async function translateWithLibreTranslate(
   });
 
   if (!response.ok) {
-    return fail(
-      limited,
-      "provider_error",
-      `Переводчик вернул ошибку ${response.status}.`,
-    );
+    return fail(limited, "provider_error", {
+      provider: "libretranslate",
+      status: response.status,
+    });
   }
 
   const translatedText = getTranslatedText(await response.json());
 
   if (!translatedText.trim()) {
-    return fail(
-      limited,
-      "empty_provider_response",
-      "Переводчик не вернул текст перевода.",
-    );
+    return fail(limited, "empty_provider_response", { provider: "libretranslate" });
   }
 
   return succeed(translatedText, context, "libretranslate");
@@ -458,17 +449,12 @@ function getFallbackProvider(
   return endpoint ? "libretranslate" : null;
 }
 
-const FALLBACK_CODES = new Set([
+const FALLBACK_CODES = new Set<TranslationErrorCode>([
   "rate_limited",
   "provider_error",
   "network_error",
   "empty_provider_response",
 ]);
-
-const FALLBACK_NOTES: Record<string, string> = {
-  yandex: "Google ограничил доступ, поэтому перевел через Yandex.",
-  libretranslate: "Google ограничил доступ, поэтому перевел через свой endpoint.",
-};
 
 function runProvider(
   provider: TranslationProvider,
@@ -486,7 +472,7 @@ function runProvider(
 }
 
 async function translateOnce(context: LibreTranslateContext): Promise<TranslationResult> {
-  const { settings, endpoint, limited } = context;
+  const { settings, endpoint } = context;
   const result = await runProvider(settings.provider, context);
 
   if (result.ok) {
@@ -503,15 +489,14 @@ async function translateOnce(context: LibreTranslateContext): Promise<Translatio
     const fallbackResult = await runProvider(fallbackProvider, context);
 
     if (fallbackResult.ok) {
-      const note = FALLBACK_NOTES[fallbackProvider];
-
-      return note ? { ...fallbackResult, note } : fallbackResult;
+      return { ...fallbackResult, fallbackFrom: result.code };
     }
   } catch {
-    return result;
+    // A broken stand-in must not hide the main provider's failure.
   }
 
-  return fail(limited, result.code, result.message, result.retryAfterMs);
+  // The main provider's failure explains more than the stand-in's.
+  return result;
 }
 
 export async function translateText({
@@ -533,33 +518,20 @@ export async function translateText({
     return {
       ok: false,
       code: "empty_text",
-      message: "Нет текста для перевода.",
       originalText: "",
     };
   }
 
   if (settings.provider === "libretranslate" && !endpoint) {
-    return fail(
-      limited,
-      "missing_endpoint",
-      "Укажи endpoint переводчика в настройках. Подойдёт LibreTranslate-compatible API.",
-    );
+    return fail(limited, "missing_endpoint");
   }
 
   if (settings.provider === "yandex" && !settings.yandexApiKey) {
-    return fail(
-      limited,
-      "missing_yandex_api_key",
-      "Укажи API-ключ Yandex Cloud Translate в настройках.",
-    );
+    return fail(limited, "missing_yandex_api_key");
   }
 
   if (typeof fetchImpl !== "function") {
-    return fail(
-      limited,
-      "fetch_unavailable",
-      "В этом окружении недоступен сетевой запрос для перевода.",
-    );
+    return fail(limited, "fetch_unavailable");
   }
 
   const cacheKey = buildCacheKey({
@@ -578,7 +550,7 @@ export async function translateText({
       targetLanguage: settings.targetLanguage,
       wasTrimmed: limited.wasTrimmed,
       provider: cached.provider,
-      ...(cached.note ? { note: cached.note } : {}),
+      ...(cached.fallbackFrom ? { fallbackFrom: cached.fallbackFrom } : {}),
     };
   }
 
@@ -597,19 +569,13 @@ export async function translateText({
   };
 
   const request = translateOnce(context)
-    .catch((): TranslationResult => {
-      return fail(
-        limited,
-        "network_error",
-        "Не удалось получить перевод. Проверь подключение или настройки провайдера.",
-      );
-    })
+    .catch((): TranslationResult => fail(limited, "network_error"))
     .then((result) => {
       if (result.ok) {
         runtime.cache.set(cacheKey, {
           translatedText: result.translatedText,
           provider: result.provider,
-          ...(result.note ? { note: result.note } : {}),
+          ...(result.fallbackFrom ? { fallbackFrom: result.fallbackFrom } : {}),
         });
       }
 

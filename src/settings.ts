@@ -1,3 +1,5 @@
+import { parseUiLanguagePreference, type UiLanguagePreference } from "./i18n.js";
+
 export type TranslationProvider = "google" | "yandex" | "libretranslate";
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -11,6 +13,7 @@ export type Settings = {
   libreTranslateApiKey: string;
   yandexFolderId: string;
   themePreference: ThemePreference;
+  uiLanguage: UiLanguagePreference;
   autoDetectSource: boolean;
   showSelectionToolbar: boolean;
   keepPanelOpen: boolean;
@@ -38,6 +41,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   libreTranslateApiKey: "",
   yandexFolderId: "",
   themePreference: "system",
+  uiLanguage: "auto",
   autoDetectSource: true,
   showSelectionToolbar: true,
   keepPanelOpen: false,
@@ -127,6 +131,7 @@ export function mergeSettings(settings: SettingsInput = {}): Settings {
     libreTranslateApiKey,
     yandexFolderId: getOptionalStringSetting(settings.yandexFolderId),
     themePreference: getThemePreference(settings.themePreference),
+    uiLanguage: parseUiLanguagePreference(settings.uiLanguage),
     autoDetectSource: Boolean(
       settings.autoDetectSource ?? DEFAULT_SETTINGS.autoDetectSource,
     ),

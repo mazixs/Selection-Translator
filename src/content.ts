@@ -1,4 +1,11 @@
 import { getRequiredElement } from "./dom.js";
+import {
+  createTranslator,
+  getUiLocale,
+  type MessageKey,
+  type Translate,
+} from "./i18n.js";
+import { appendLanguageOptions, localizeTree } from "./i18n-dom.js";
 import { shouldRefreshSelectionForKey } from "./keyboard.js";
 import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import {
@@ -10,14 +17,39 @@ import {
 } from "./settings.js";
 import { normalizeSelectionText } from "./text.js";
 import { type CopyOutcome, translateAndCopy } from "./translate-copy.js";
+import {
+  describeTranslationFailure,
+  describeTranslationNote,
+} from "./translation-messages.js";
 import type { TranslationResult } from "./translator.js";
 import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.js";
+
+/** A text in whatever language `t` speaks, so it can be shown again after a switch. */
+type Wording = (t: Translate) => string;
+
+const NO_TEXT: Wording = () => "";
+
+function wording(key: MessageKey): Wording {
+  return (t) => t(key);
+}
+
+/** Text that is not ours to translate, such as the translation itself. */
+function verbatim(text: string): Wording {
+  return () => text;
+}
+
+function joinWordings(...parts: Wording[]): Wording {
+  return (t) =>
+    parts
+      .map((part) => part(t))
+      .filter(Boolean)
+      .join(" ");
+}
 
 (() => {
   const ROOT_ID = "selection-translator-root";
   const HIDDEN_CLASS = "stx-hidden";
   const UI_Z_INDEX = 2147483647;
-  const TRANSLATE_LABEL = "Перевести";
 
   type ToolbarAction =
     | "translate"
@@ -43,12 +75,19 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   let selectionTimer: ReturnType<typeof setTimeout> | undefined;
   let ignoreSelectionUntil = 0;
   let activeTranslationRequestId = 0;
-  // The note the panel rests on, and the part of it that came with the result.
-  let panelNote = "";
-  let resultNote = "";
+  // What the panel and the toolbar show from code, kept as wordings so that a
+  // language change can render them again: the panel text, the note the panel
+  // rests on, the part of it that came with the result, and running flashes.
+  let panelText: Wording = NO_TEXT;
+  let panelNote: Wording = NO_TEXT;
+  let resultNote: Wording = NO_TEXT;
+  let panelFlash: Wording | null = null;
+  let toolbarFlash: Wording | null = null;
   let panelFlashTimer: ReturnType<typeof setTimeout> | undefined;
   let toolbarFlashTimer: ReturnType<typeof setTimeout> | undefined;
   let cachedSettings: Settings = { ...DEFAULT_SETTINGS };
+  // The browser language until the settings arrive; `applyLocale` then corrects it.
+  let t: Translate = createTranslator(getUiLocale("auto"));
 
   function isHTMLElement(target: EventTarget | null): target is HTMLElement {
     return target instanceof HTMLElement;
@@ -90,7 +129,41 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     const settings = await sendMessage<Settings>({ type: "ST_GET_SETTINGS" });
     cachedSettings = { ...DEFAULT_SETTINGS, ...(settings || {}) };
     applyAppearance();
+    applyLocale();
     return cachedSettings;
+  }
+
+  function getLocale() {
+    return getUiLocale(getSettings().uiLanguage);
+  }
+
+  /** Re-labels the UI already on the page, including the texts set from code. */
+  function applyLocale() {
+    const locale = getLocale();
+    t = createTranslator(locale);
+
+    if (!root) {
+      return;
+    }
+
+    root.lang = locale;
+    localizeTree(root, t);
+
+    const panelTextElement = panel?.querySelector(".stx-panel-text");
+    if (panelTextElement) {
+      panelTextElement.textContent = panelText(t);
+    }
+
+    const panelNoteElement = panel?.querySelector(".stx-panel-note");
+    if (panelNoteElement) {
+      panelNoteElement.textContent = (panelFlash ?? panelNote)(t);
+    }
+
+    // localizeTree has just put the resting label back over a running flash.
+    const translateButton = toolbar?.querySelector('[data-action="translate"]');
+    if (translateButton && toolbarFlash) {
+      translateButton.textContent = toolbarFlash(t);
+    }
   }
 
   function getSettings(): Settings {
@@ -129,6 +202,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     );
 
     applyAppearance(root);
+    root.lang = getLocale();
     document.documentElement.append(root);
     return root;
   }
@@ -147,17 +221,11 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     target.dataset.translucent = String(opacity < 100);
   }
 
-  function createButton(
-    label: string,
-    action: ToolbarAction,
-    title = label,
-  ): HTMLButtonElement {
+  function createButton(action: ToolbarAction): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "stx-button";
     button.dataset.action = action;
-    button.title = title;
-    button.textContent = label;
     return button;
   }
 
@@ -171,12 +239,16 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     toolbar = document.createElement("div");
     toolbar.className = `stx-toolbar ${HIDDEN_CLASS}`;
     toolbar.setAttribute("role", "menu");
+    const translateButton = createButton("translate");
+    translateButton.dataset.i18n = "toolbar.translate";
+    translateButton.dataset.i18nTitle = "toolbar.translate";
     toolbar.append(createBadge());
-    toolbar.append(createButton(TRANSLATE_LABEL, "translate"));
-    toolbar.append(createIconButton("⧉", "copy-selected", "Скопировать выделенное"));
-    toolbar.append(createIconButton("⇄", "translate-copy", "Перевести и скопировать"));
-    toolbar.append(createIconButton("⋮", "settings", "Настройки"));
-    toolbar.append(createIconButton("×", "close", "Закрыть"));
+    toolbar.append(translateButton);
+    toolbar.append(createIconButton("⧉", "copy-selected", "toolbar.copySelection"));
+    toolbar.append(createIconButton("⇄", "translate-copy", "toolbar.translateAndCopy"));
+    toolbar.append(createIconButton("⋮", "settings", "common.settings"));
+    toolbar.append(createIconButton("×", "close", "common.close"));
+    localizeTree(toolbar, t);
     nextRoot.append(toolbar);
 
     toolbar.addEventListener("click", (event) => {
@@ -208,7 +280,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   function createBadge(): HTMLSpanElement {
     const badge = document.createElement("span");
     badge.className = "stx-badge";
-    badge.title = "Selection Translator";
+    badge.dataset.i18nTitle = "app.name";
 
     const icon = document.createElement("img");
     icon.className = "stx-badge-icon";
@@ -221,13 +293,15 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   }
 
   function createIconButton(
-    label: string,
+    symbol: string,
     action: ToolbarAction,
-    title: string,
+    titleKey: MessageKey,
   ): HTMLButtonElement {
-    const button = createButton(label, action, title);
+    const button = createButton(action);
     button.classList.add("stx-icon-button");
-    button.setAttribute("aria-label", title);
+    button.textContent = symbol;
+    button.dataset.i18nTitle = titleKey;
+    button.dataset.i18nAriaLabel = titleKey;
     return button;
   }
 
@@ -241,25 +315,16 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     panel = document.createElement("div");
     panel.className = `stx-panel ${HIDDEN_CLASS}`;
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "Перевод");
+    panel.dataset.i18nAriaLabel = "panel.label";
     panel.innerHTML = `
       <div class="stx-panel-header">
         <label class="stx-language-label">
-          <span class="stx-visually-hidden">Язык перевода</span>
-          <select class="stx-language-select">
-            <option value="ru">Русский</option>
-            <option value="en">Английский</option>
-            <option value="de">Немецкий</option>
-            <option value="fr">Французский</option>
-            <option value="es">Испанский</option>
-            <option value="it">Итальянский</option>
-            <option value="tr">Турецкий</option>
-            <option value="uk">Украинский</option>
-          </select>
+          <span class="stx-visually-hidden" data-i18n="panel.targetLanguage"></span>
+          <select class="stx-language-select"></select>
         </label>
         <div class="stx-panel-actions">
-          <button type="button" class="stx-icon-button stx-panel-copy" title="Скопировать перевод" aria-label="Скопировать перевод">⧉</button>
-          <button type="button" class="stx-icon-button stx-panel-close" title="Закрыть" aria-label="Закрыть">×</button>
+          <button type="button" class="stx-icon-button stx-panel-copy" data-i18n-title="panel.copyTranslation" data-i18n-aria-label="panel.copyTranslation">⧉</button>
+          <button type="button" class="stx-icon-button stx-panel-close" data-i18n-title="common.close" data-i18n-aria-label="common.close">×</button>
         </div>
       </div>
       <div class="stx-panel-body">
@@ -272,10 +337,14 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
         <div class="stx-panel-note"></div>
       </div>
       <div class="stx-panel-footer">
-        <button type="button" class="stx-copy-translation">Скопировать перевод</button>
+        <button type="button" class="stx-copy-translation" data-i18n="panel.copyTranslation"></button>
       </div>
     `;
 
+    appendLanguageOptions(
+      getRequiredElement(".stx-language-select", HTMLSelectElement, panel),
+    );
+    localizeTree(panel, t);
     nextRoot.append(panel);
 
     getRequiredElement(".stx-panel-close", HTMLButtonElement, panel).addEventListener(
@@ -470,20 +539,39 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     hidePanel();
   }
 
-  function setPanelState(kind: PanelState, text: string, note = "") {
+  /**
+   * `textLanguage` names the language of a translation. Loading and error
+   * texts have none and inherit the interface language from the root.
+   */
+  function setPanelState(
+    kind: PanelState,
+    text: Wording,
+    note: Wording = NO_TEXT,
+    textLanguage = "",
+  ) {
     const nextPanel = ensurePanel();
     nextPanel.dataset.state = kind;
-    getRequiredElement(".stx-panel-text", HTMLDivElement, nextPanel).textContent = text;
+    panelText = text;
+
+    const textElement = getRequiredElement(".stx-panel-text", HTMLDivElement, nextPanel);
+    textElement.textContent = text(t);
+    if (textLanguage) {
+      textElement.lang = textLanguage;
+    } else {
+      textElement.removeAttribute("lang");
+    }
+
     resultNote = note;
     setPanelNote(note);
   }
 
   /** Sets the note the panel rests on, and drops a flash that would overwrite it. */
-  function setPanelNote(note: string) {
+  function setPanelNote(note: Wording) {
     clearTimeout(panelFlashTimer);
+    panelFlash = null;
     panelNote = note;
     getRequiredElement(".stx-panel-note", HTMLDivElement, ensurePanel()).textContent =
-      note;
+      note(t);
   }
 
   async function handleToolbarAction(action: ToolbarAction) {
@@ -519,19 +607,6 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     }
   }
 
-  function getPanelNote(result: TranslationResult): string {
-    if (!result.ok) {
-      return "";
-    }
-
-    const notes = [
-      result.note || "",
-      result.wasTrimmed ? "Текст был обрезан по лимиту из настроек." : "",
-    ];
-
-    return notes.filter(Boolean).join(" ");
-  }
-
   /** Resolves to true only when this request's translation is the one on screen. */
   async function openTranslationPanel(forcedText = ""): Promise<boolean> {
     const snapshot = getSelectionSnapshot(forcedText) || currentSelection;
@@ -543,7 +618,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     currentTranslation = "";
     const requestId = ++activeTranslationRequestId;
     showPanel(snapshot.rect);
-    setPanelState("loading", "Перевожу...");
+    setPanelState("loading", wording("panel.loading"));
 
     const settings = getSettings();
     const languageSelect = getRequiredElement(
@@ -565,19 +640,24 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     if (!result) {
       setPanelState(
         "error",
-        "Не удалось связаться с расширением.",
-        "Попробуй обновить страницу и повторить.",
+        wording("panel.noConnection"),
+        wording("panel.noConnectionHint"),
       );
       return false;
     }
 
     if (!result.ok) {
-      setPanelState("error", result.message || "Не удалось перевести текст.");
+      setPanelState("error", (t) => describeTranslationFailure(result, t));
       return false;
     }
 
     currentTranslation = result.translatedText;
-    setPanelState("ready", result.translatedText, getPanelNote(result));
+    setPanelState(
+      "ready",
+      verbatim(result.translatedText),
+      (t) => describeTranslationNote(result, t),
+      result.targetLanguage,
+    );
     return true;
   }
 
@@ -585,7 +665,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     const text =
       forcedText || currentSelection?.text || getSelectionSnapshot()?.text || "";
     const copied = await copyText(text);
-    flashToolbar(copied ? "Скопировано" : "Не вышло");
+    flashToolbar(wording(copied ? "toolbar.copied" : "toolbar.copyFailed"));
   }
 
   async function copyTranslation() {
@@ -603,25 +683,15 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
         return;
       case "unfocused":
         // The hint stays until the next state: the user is likely to be away longer than a flash.
-        setPanelNote(
-          [
-            resultNote,
-            "Вкладка была не в фокусе, перевод не скопирован. Нажми ⧉ в панели.",
-          ]
-            .filter(Boolean)
-            .join(" "),
-        );
+        setPanelNote(joinWordings(resultNote, wording("panel.unfocused")));
         return;
       case "copied":
         clearCopyHint();
-        flashPanel("Перевод скопирован");
+        flashPanel(wording("panel.copied"));
         return;
       case "failed":
         clearCopyHint();
-        flashPanel(
-          "Страница не дала доступ к буферу обмена. Выдели перевод мышью и нажми Ctrl+C.",
-          5_000,
-        );
+        flashPanel(wording("panel.copyBlocked"), 5_000);
         return;
       default: {
         const unhandled: never = outcome;
@@ -684,7 +754,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     return copied;
   }
 
-  function flashToolbar(message: string) {
+  function flashToolbar(message: Wording) {
     const translateButton = toolbar?.querySelector<HTMLButtonElement>(
       '[data-action="translate"]',
     );
@@ -692,16 +762,18 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       return;
     }
 
-    // Restoring a constant label, not a captured one: a second flash would
-    // otherwise capture the first message and leave it on the button for good.
+    // Restoring the label from the catalog, not a captured one: a second flash
+    // would otherwise capture the first message and leave it on the button.
     clearTimeout(toolbarFlashTimer);
-    translateButton.textContent = message;
+    toolbarFlash = message;
+    translateButton.textContent = message(t);
     toolbarFlashTimer = setTimeout(() => {
-      translateButton.textContent = TRANSLATE_LABEL;
+      toolbarFlash = null;
+      translateButton.textContent = t("toolbar.translate");
     }, 900);
   }
 
-  function flashPanel(message: string, durationMs = 1200) {
+  function flashPanel(message: Wording, durationMs = 1200) {
     const note = panel?.querySelector<HTMLDivElement>(".stx-panel-note");
     if (!note) {
       return;
@@ -710,9 +782,11 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     // The note is restored from state, not from what it showed when the flash
     // began, so a result that arrives meanwhile keeps its own note.
     clearTimeout(panelFlashTimer);
-    note.textContent = message;
+    panelFlash = message;
+    note.textContent = message(t);
     panelFlashTimer = setTimeout(() => {
-      note.textContent = panelNote;
+      panelFlash = null;
+      note.textContent = panelNote(t);
     }, durationMs);
   }
 
@@ -731,9 +805,8 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       ...currentSettings,
       targetLanguage,
     };
-    await chrome.storage.sync.set({
-      ...cachedSettings,
-    });
+    // Only this field: a whole copy could put back values changed elsewhere.
+    await chrome.storage.sync.set({ targetLanguage });
 
     if (currentSelection?.text) {
       await openTranslationPanel(currentSelection.text);
@@ -785,6 +858,10 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
         ...changedSettings,
       });
       applyAppearance();
+
+      if (changes?.uiLanguage) {
+        applyLocale();
+      }
 
       if (changes?.targetLanguage && panel && !panel.classList.contains(HIDDEN_CLASS)) {
         const languageSelect = getRequiredElement(

@@ -94,7 +94,7 @@ test("copying falls back to a textarea and reports a failure", () => {
   );
   assert.match(contentScript, /return copyThroughTextarea\(value\);/);
   assert.match(contentScript, /copied = document\.execCommand\("copy"\);/);
-  assert.match(contentScript, /Ctrl\+C/);
+  assert.match(contentScript, /wording\("panel\.copyBlocked"\)/);
 });
 
 test("panel surface follows the opacity setting and blurs only when translucent", () => {
@@ -164,7 +164,7 @@ test("openTranslationPanel reports success only after a current, successful tran
   const successReturn = body.indexOf("return true;");
 
   assert.equal(body.indexOf("return true;", successReturn + 1), -1);
-  assert.match(body, /setPanelState\("ready"[^;]*;\s+return true;/);
+  assert.match(body, /setPanelState\(\s*"ready"[^;]*;\s+return true;/);
   assert.ok(body.indexOf("requestId !== activeTranslationRequestId") < successReturn);
 });
 
@@ -191,8 +191,8 @@ test("flashes restore the resting state instead of reading back what they overwr
 
   assert.equal(textRead.test(panelFlash), false);
   assert.equal(textRead.test(toolbarFlash), false);
-  assert.match(panelFlash, /= panelNote;/);
-  assert.match(toolbarFlash, /= TRANSLATE_LABEL;/);
+  assert.match(panelFlash, /= panelNote\(t\);/);
+  assert.match(toolbarFlash, /= t\("toolbar\.translate"\);/);
 });
 
 test("a new resting note or panel state cancels a pending flash", () => {
@@ -212,4 +212,42 @@ test("every copy attempt from the panel clears the not-copied hint", () => {
   assert.match(clearHint, /setPanelNote\(resultNote\);/);
   assert.match(contentScript, /case "copied":\s+clearCopyHint\(\);/);
   assert.match(contentScript, /case "failed":\s+clearCopyHint\(\);/);
+});
+
+test("content script takes every text from the catalogs and follows a language change", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const applyLocale = getFunctionBody(contentScript, "function applyLocale(");
+
+  assert.match(applyLocale, /t = createTranslator\(locale\);/);
+  assert.match(applyLocale, /localizeTree\(root, t\);/);
+  assert.match(contentScript, /if \(changes\?\.uiLanguage\) \{\s+applyLocale\(\);/);
+  assert.match(
+    contentScript,
+    /setPanelState\("error", \(t\) => describeTranslationFailure\(result, t\)\);/,
+  );
+  assert.equal(contentScript.includes("<option"), false);
+});
+
+test("a language change renders the texts set from code again, flashes included", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const applyLocale = getFunctionBody(contentScript, "function applyLocale(");
+  const setState = getFunctionBody(contentScript, "function setPanelState(");
+
+  assert.match(applyLocale, /panelText\(t\)/);
+  assert.match(applyLocale, /\(panelFlash \?\? panelNote\)\(t\)/);
+  assert.match(applyLocale, /toolbarFlash\(t\)/);
+  // The translation is labeled with its own language, not the interface one.
+  assert.match(setState, /textElement\.lang = textLanguage;/);
+  assert.match(
+    contentScript,
+    /verbatim\(result\.translatedText\),[^;]*result\.targetLanguage,/s,
+  );
+});
+
+test("the panel language change writes only that field", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+
+  // A whole settings copy could put back values changed on the settings page.
+  assert.match(contentScript, /chrome\.storage\.sync\.set\(\{ targetLanguage \}\)/);
+  assert.doesNotMatch(contentScript, /storage\.sync\.set\(\{\s*\.\.\.cachedSettings/);
 });

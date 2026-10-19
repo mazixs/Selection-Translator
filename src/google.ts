@@ -116,7 +116,7 @@ function parseSentences(payload: unknown): string {
   );
 }
 
-/** The classic answer is `[[["перевод", "original", …], …], …]`. */
+/** The classic answer is `[[["translation", "original", …], …], …]`. */
 function parseNestedArray(payload: unknown): string {
   if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
     return "";
@@ -127,7 +127,7 @@ function parseNestedArray(payload: unknown): string {
   );
 }
 
-/** `translate_a/t` answers with `[["перевод", "en"]]`. */
+/** `translate_a/t` answers with `[["translation", "en"]]`. */
 function parseFlatArray(payload: unknown): string {
   if (!Array.isArray(payload)) {
     return "";

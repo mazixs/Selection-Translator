@@ -1,3 +1,5 @@
+import { createTranslator, type MessageKey, type UiLocale } from "./i18n.js";
+
 export const MENU_IDS = Object.freeze({
   parent: "selection-translator-parent",
   translate: "selection-translator-translate",
@@ -22,30 +24,32 @@ export type ContextMenuChromeApi = {
   contextMenus: ContextMenusApi;
 };
 
-type MenuDefinition = chrome.contextMenus.CreateProperties;
+type MenuDefinition = Omit<chrome.contextMenus.CreateProperties, "title"> & {
+  titleKey: MessageKey;
+};
 
 const MENU_DEFINITIONS: readonly MenuDefinition[] = [
   {
     id: MENU_IDS.parent,
-    title: "Перевод",
+    titleKey: "menu.parent",
     contexts: ["selection"],
   },
   {
     id: MENU_IDS.translate,
     parentId: MENU_IDS.parent,
-    title: "Перевести",
+    titleKey: "menu.translate",
     contexts: ["selection"],
   },
   {
     id: MENU_IDS.copy,
     parentId: MENU_IDS.parent,
-    title: "Скопировать",
+    titleKey: "menu.copy",
     contexts: ["selection"],
   },
   {
     id: MENU_IDS.settings,
     parentId: MENU_IDS.parent,
-    title: "Настройки",
+    titleKey: "common.settings",
     contexts: ["selection"],
   },
 ];
@@ -74,24 +78,31 @@ function runContextMenuOperation(
   });
 }
 
-async function recreateContextMenus(chromeApi: ContextMenuChromeApi): Promise<void> {
+async function recreateContextMenus(
+  chromeApi: ContextMenuChromeApi,
+  locale: UiLocale,
+): Promise<void> {
+  const t = createTranslator(locale);
+
   await runContextMenuOperation(chromeApi, (callback) => {
     chromeApi.contextMenus.removeAll(callback);
   });
 
-  for (const definition of MENU_DEFINITIONS) {
+  for (const { titleKey, ...definition } of MENU_DEFINITIONS) {
     await runContextMenuOperation(chromeApi, (callback) => {
-      chromeApi.contextMenus.create(definition, callback);
+      chromeApi.contextMenus.create({ ...definition, title: t(titleKey) }, callback);
     });
   }
 }
 
+/** Menu titles cannot be updated by language, so a language change rebuilds the menu. */
 export function setupContextMenus(
+  locale: UiLocale,
   chromeApi: ContextMenuChromeApi = chrome,
 ): Promise<void> {
   contextMenuSetupPromise = contextMenuSetupPromise.then(
-    () => recreateContextMenus(chromeApi),
-    () => recreateContextMenus(chromeApi),
+    () => recreateContextMenus(chromeApi, locale),
+    () => recreateContextMenus(chromeApi, locale),
   );
 
   return contextMenuSetupPromise;

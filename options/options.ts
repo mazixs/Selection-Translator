@@ -1,5 +1,19 @@
 import { getRequiredElement } from "../src/dom.js";
 import {
+  getMessages,
+  getUiLocale,
+  parseUiLanguagePreference,
+  type Translate,
+  UI_LOCALES,
+  type UiLocale,
+} from "../src/i18n.js";
+import {
+  appendLanguageOptions,
+  getInitialUiLocale,
+  localizePage,
+  rememberUiLocale,
+} from "../src/i18n-dom.js";
+import {
   clampPanelOpacity,
   DEFAULT_SETTINGS,
   loadSettings,
@@ -13,6 +27,7 @@ type ResolvedTheme = "light" | "dark";
 
 type SettingsFormControls = HTMLFormControlsCollection & {
   themePreference: HTMLInputElement;
+  uiLanguage: HTMLSelectElement;
   targetLanguage: HTMLSelectElement;
   provider: HTMLSelectElement;
   sourceLanguage: HTMLInputElement;
@@ -45,6 +60,28 @@ const manualSourceFields = [
 const themeToggleButton = getRequiredElement("#theme-toggle", HTMLButtonElement);
 const systemThemeQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
 
+appendUiLanguageOptions(fields.uiLanguage);
+appendLanguageOptions(fields.targetLanguage);
+// Texts first, without waiting for storage, so the page is never shown blank.
+let t: Translate = localizePage(getInitialUiLocale());
+
+/** Each language is named in itself, so it can be found from any interface language. */
+function appendUiLanguageOptions(select: HTMLSelectElement) {
+  for (const locale of UI_LOCALES) {
+    const option = new Option(getMessages(locale)["locale.autonym"], locale);
+    option.lang = locale;
+    select.append(option);
+  }
+}
+
+/** Shows the page in the language of `uiLanguage` and returns that locale. */
+function applyLocale(uiLanguage: unknown): UiLocale {
+  const locale = getUiLocale(parseUiLanguagePreference(uiLanguage));
+  t = localizePage(locale);
+  updateThemeToggleLabel();
+  return locale;
+}
+
 function normalizeThemePreference(themePreference: unknown): ThemePreference {
   return themePreference === "light" || themePreference === "dark"
     ? themePreference
@@ -61,7 +98,7 @@ function getResolvedTheme(themePreference: unknown): ResolvedTheme {
 }
 
 function getThemeToggleLabel(resolvedTheme: ResolvedTheme): string {
-  return resolvedTheme === "dark" ? "Включить светлую тему" : "Включить темную тему";
+  return t(resolvedTheme === "dark" ? "options.themeToLight" : "options.themeToDark");
 }
 
 function applyThemePreference(themePreference: unknown) {
@@ -71,7 +108,12 @@ function applyThemePreference(themePreference: unknown) {
   document.documentElement.dataset.theme = preference;
   document.documentElement.dataset.themeResolved = resolvedTheme;
   fields.themePreference.value = preference;
+  updateThemeToggleLabel();
+}
 
+/** The label names the theme the button switches to, in the current language. */
+function updateThemeToggleLabel() {
+  const resolvedTheme = getResolvedTheme(fields.themePreference.value);
   const label = getThemeToggleLabel(resolvedTheme);
   themeToggleButton.setAttribute("aria-label", label);
   themeToggleButton.title = label;
@@ -79,6 +121,9 @@ function applyThemePreference(themePreference: unknown) {
 
 function fillForm(settings: Settings) {
   applyThemePreference(settings.themePreference);
+  fields.uiLanguage.value = settings.uiLanguage;
+  // fillForm only ever gets saved settings, unlike a preview from the select.
+  rememberUiLocale(applyLocale(settings.uiLanguage));
   fields.targetLanguage.value = settings.targetLanguage;
   fields.provider.value = settings.provider;
   fields.sourceLanguage.value = settings.sourceLanguage;
@@ -118,7 +163,7 @@ function setUnsaved(unsaved: boolean) {
   saveButton.disabled = !unsaved;
 
   if (unsaved) {
-    setStatus("Есть несохраненные изменения", "pending");
+    setStatus(t("options.statusUnsaved"), "pending");
     return;
   }
 
@@ -129,6 +174,7 @@ function setUnsaved(unsaved: boolean) {
 
 function readForm(): SettingsInput {
   return {
+    uiLanguage: fields.uiLanguage.value,
     targetLanguage: fields.targetLanguage.value,
     provider: fields.provider.value,
     sourceLanguage: fields.sourceLanguage.value,
@@ -214,7 +260,7 @@ themeToggleButton.addEventListener("click", async () => {
 
   const storedSettings = await loadSettings();
   await saveSettings({ ...storedSettings, themePreference: nextPreference });
-  setStatus("Тема сохранена");
+  setStatus(t("options.statusThemeSaved"));
 });
 
 systemThemeQuery?.addEventListener("change", () => {
@@ -229,25 +275,30 @@ form.addEventListener("submit", async (event) => {
   const permissionGranted = await requestLibreTranslatePermission(nextSettings);
 
   if (!permissionGranted) {
-    setStatus("Нет доступа к endpoint");
+    setStatus(t("options.statusNoEndpointAccess"));
     return;
   }
 
   const saved = await saveSettings(nextSettings);
   fillForm(saved);
-  setStatus("Сохранено");
+  setStatus(t("options.statusSaved"));
   saveButton.disabled = true;
 });
 
 resetButton.addEventListener("click", async () => {
   const saved = await saveSettings(DEFAULT_SETTINGS);
   fillForm(saved);
-  setStatus("Сброшено");
+  setStatus(t("options.statusReset"));
   saveButton.disabled = true;
 });
 
 form.addEventListener("input", (event) => {
   const target = event.target;
+
+  // The page switches language at once, before the choice is saved.
+  if (target === fields.uiLanguage) {
+    applyLocale(fields.uiLanguage.value);
+  }
 
   if (target === fields.panelOpacity) {
     applyPanelOpacity(fields.panelOpacity.value);
@@ -260,5 +311,6 @@ form.addEventListener("input", (event) => {
   setUnsaved(true);
 });
 
+updateThemeToggleLabel();
 fillForm(await loadSettings());
 setUnsaved(false);

@@ -28,3 +28,17 @@ test("background no longer configures dynamic Yandex web header rewrites", () =>
   assert.equal(backgroundScript.includes("modifyHeaders"), false);
   assert.equal(backgroundScript.includes("configureYandexWebHeaderRules"), false);
 });
+
+test("background reads settings from storage per request and keeps the menu up to date", () => {
+  const backgroundScript = readFileSync(join(ROOT, "src/background.ts"), "utf8");
+
+  // A worker-lifetime copy went stale between a write and its onChanged event.
+  assert.equal(backgroundScript.includes("createSettingsCache"), false);
+  assert.match(backgroundScript, /const settings = await loadSettings\(\);/);
+  assert.match(backgroundScript, /sendResponse\(await loadSettings\(\)\)/);
+  // An older refresh still waiting for settings must not overwrite a newer menu.
+  assert.match(backgroundScript, /const refreshId = \+\+menuRefreshId;/);
+  assert.match(backgroundScript, /if \(refreshId === menuRefreshId\)/);
+  // A failed read still leaves a menu, in the browser language.
+  assert.match(backgroundScript, /return getUiLocale\("auto"\);/);
+});

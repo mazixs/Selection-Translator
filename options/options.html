@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Selection Translator - настройки</title>
+    <title data-i18n="options.pageTitle"></title>
     <link rel="stylesheet" href="options.css">
   </head>
   <body>
@@ -11,10 +11,10 @@
       <header class="settings-header">
         <img class="brand-mark" src="../assets/icon.svg" alt="" aria-hidden="true">
         <div class="settings-heading">
-          <h1>Selection Translator</h1>
-          <p>Панель перевода для выделенного текста.</p>
+          <h1 data-i18n="app.name"></h1>
+          <p data-i18n="options.tagline"></p>
         </div>
-        <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Включить темную тему" title="Включить темную тему">
+        <button type="button" id="theme-toggle" class="theme-toggle">
           <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M21 14.2A7.7 7.7 0 0 1 9.8 3a8.7 8.7 0 1 0 11.2 11.2Z"></path>
           </svg>
@@ -30,71 +30,62 @@
 
         <section class="settings-section">
           <div class="section-head">
-            <h2>Перевод</h2>
-            <p>Куда и с какого языка переводить выделенный текст.</p>
+            <h2 data-i18n="options.translation.title"></h2>
+            <p data-i18n="options.translation.description"></p>
           </div>
 
           <div class="field-grid">
             <label class="field">
-              <span>Язык перевода</span>
-              <select name="targetLanguage">
-                <option value="ru">Русский</option>
-                <option value="en">Английский</option>
-                <option value="de">Немецкий</option>
-                <option value="fr">Французский</option>
-                <option value="es">Испанский</option>
-                <option value="it">Итальянский</option>
-                <option value="tr">Турецкий</option>
-                <option value="uk">Украинский</option>
-              </select>
+              <span data-i18n="options.targetLanguage"></span>
+              <select name="targetLanguage"></select>
             </label>
 
             <label class="field" data-shown-when="manual-source">
-              <span>Исходный язык</span>
+              <span data-i18n="options.sourceLanguage"></span>
               <input name="sourceLanguage" type="text" placeholder="en" autocomplete="off">
-              <span class="field-hint">Код языка: en, de, tr.</span>
+              <span class="field-hint" data-i18n="options.sourceLanguageHint"></span>
             </label>
           </div>
 
           <label class="switch-field">
             <input type="checkbox" name="autoDetectSource">
             <span class="switch-text">
-              <span class="switch-title">Определять язык автоматически</span>
-              <span class="field-hint">Выключи, если сайт смешивает два языка в одном абзаце.</span>
+              <span class="switch-title" data-i18n="options.autoDetectSource"></span>
+              <span class="field-hint" data-i18n="options.autoDetectSourceHint"></span>
             </span>
           </label>
         </section>
 
         <section class="settings-section">
           <div class="section-head">
-            <h2>Провайдер</h2>
-            <p>Google работает без ключа, остальным нужны свои реквизиты.</p>
+            <h2 data-i18n="options.provider.title"></h2>
+            <p data-i18n="options.provider.description"></p>
           </div>
 
           <label class="field">
-            <span>Сервис перевода</span>
+            <span data-i18n="options.providerService"></span>
             <select name="provider">
-              <option value="google">Google web, без ключа</option>
-              <option value="yandex">Yandex Cloud Translate</option>
-              <option value="libretranslate">LibreTranslate endpoint</option>
+              <option value="google" data-i18n="options.providerGoogle"></option>
+              <option value="yandex" data-i18n="options.providerYandex"></option>
+              <option value="libretranslate" data-i18n="options.providerLibreTranslate"></option>
             </select>
           </label>
 
           <div class="provider-fields" data-provider="google">
-            <p class="provider-hint">Ключ не нужен. Доступ ограничивается по IP-адресу, поэтому при ошибке 429 выручает второй провайдер из раздела «Надежность».</p>
+            <p class="provider-hint" data-i18n="options.googleHint"></p>
           </div>
 
           <div class="provider-fields" data-provider="yandex">
             <div class="field-grid">
               <label class="field">
-                <span>API-ключ Yandex Cloud</span>
+                <span data-i18n="options.yandexApiKey"></span>
                 <input name="yandexApiKey" type="password" autocomplete="off" placeholder="Api-Key">
               </label>
 
               <label class="field">
-                <span>Folder id</span>
+                <span data-i18n="options.yandexFolderId"></span>
                 <input name="yandexFolderId" type="text" autocomplete="off" placeholder="b1g...">
-                <span class="field-hint">Нужен, если ключ выдан сервисному аккаунту.</span>
+                <span class="field-hint" data-i18n="options.yandexFolderIdHint"></span>
               </label>
             </div>
           </div>
@@ -102,14 +93,14 @@
           <div class="provider-fields" data-provider="libretranslate">
             <div class="field-grid">
               <label class="field">
-                <span>Endpoint</span>
+                <span data-i18n="options.endpoint"></span>
                 <input name="endpoint" type="url" placeholder="https://translate.example.com">
-                <span class="field-hint">Chrome спросит доступ к этому адресу при сохранении.</span>
+                <span class="field-hint" data-i18n="options.endpointHint"></span>
               </label>
 
               <label class="field">
-                <span>API-ключ</span>
-                <input name="libreTranslateApiKey" type="password" autocomplete="off" placeholder="Если endpoint его требует">
+                <span data-i18n="options.libreTranslateApiKey"></span>
+                <input name="libreTranslateApiKey" type="password" autocomplete="off" data-i18n-placeholder="options.libreTranslateApiKeyPlaceholder">
               </label>
             </div>
           </div>
@@ -117,17 +108,17 @@
 
         <section class="settings-section">
           <div class="section-head">
-            <h2>Панель на странице</h2>
-            <p>Как всплывающее окно ведет себя поверх сайта.</p>
+            <h2 data-i18n="options.panel.title"></h2>
+            <p data-i18n="options.panel.description"></p>
           </div>
 
           <div class="field field-slider">
             <div class="field-head">
-              <span>Прозрачность панели</span>
+              <span data-i18n="options.panelOpacity"></span>
               <output id="opacity-output" class="field-value" for="panelOpacity">75%</output>
             </div>
             <input name="panelOpacity" type="range" min="25" max="100" step="5" aria-describedby="opacity-hint">
-            <span class="field-hint" id="opacity-hint">Просвечивает только фон: текст перевода остается контрастным, а страница за панелью размывается.</span>
+            <span class="field-hint" id="opacity-hint" data-i18n="options.panelOpacityHint"></span>
 
             <div class="opacity-preview" aria-hidden="true">
               <div class="preview-page">
@@ -139,8 +130,8 @@
                 <span class="preview-line"></span>
               </div>
               <div class="preview-panel">
-                <div class="preview-panel-head">Русский</div>
-                <div class="preview-panel-body">Получите более 400 подсказок и веб-сайтов AI</div>
+                <div class="preview-panel-head" data-i18n="options.previewLanguage"></div>
+                <div class="preview-panel-body" data-i18n="options.previewText"></div>
               </div>
             </div>
           </div>
@@ -148,44 +139,59 @@
           <label class="switch-field">
             <input type="checkbox" name="showSelectionToolbar">
             <span class="switch-text">
-              <span class="switch-title">Показывать кнопки при выделении текста</span>
-              <span class="field-hint">Без них перевод вызывается через контекстное меню.</span>
+              <span class="switch-title" data-i18n="options.showSelectionToolbar"></span>
+              <span class="field-hint" data-i18n="options.showSelectionToolbarHint"></span>
             </span>
           </label>
 
           <label class="switch-field">
             <input type="checkbox" name="keepPanelOpen">
             <span class="switch-text">
-              <span class="switch-title">Не закрывать окно перевода при снятии выделения</span>
+              <span class="switch-title" data-i18n="options.keepPanelOpen"></span>
             </span>
           </label>
         </section>
 
         <section class="settings-section">
           <div class="section-head">
-            <h2>Надежность</h2>
-            <p>Что делать, когда провайдер отказал или текст слишком длинный.</p>
+            <h2 data-i18n="options.reliability.title"></h2>
+            <p data-i18n="options.reliability.description"></p>
           </div>
 
           <label class="switch-field">
             <input type="checkbox" name="autoFallbackProvider">
             <span class="switch-text">
-              <span class="switch-title">Переводить через второго провайдера, когда Google ограничил доступ</span>
-              <span class="field-hint">Сработает, если указан ключ Yandex Cloud или свой endpoint.</span>
+              <span class="switch-title" data-i18n="options.autoFallbackProvider"></span>
+              <span class="field-hint" data-i18n="options.autoFallbackProviderHint"></span>
             </span>
           </label>
 
           <label class="field field-compact">
-            <span>Максимум символов за один перевод</span>
+            <span data-i18n="options.maxCharacters"></span>
             <input name="maxCharacters" type="number" min="100" max="50000" step="100" inputmode="numeric">
-            <span class="field-hint">Длинное выделение обрезается, и панель об этом предупреждает.</span>
+            <span class="field-hint" data-i18n="options.maxCharactersHint"></span>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <div class="section-head">
+            <h2 data-i18n="options.interface.title"></h2>
+            <p data-i18n="options.interface.description"></p>
+          </div>
+
+          <label class="field field-compact">
+            <span data-i18n="options.uiLanguage"></span>
+            <select name="uiLanguage">
+              <option value="auto" data-i18n="options.uiLanguageAuto"></option>
+            </select>
+            <span class="field-hint" data-i18n="options.uiLanguageHint"></span>
           </label>
         </section>
 
         <footer class="settings-actions">
           <span id="status" class="status" role="status"></span>
-          <button type="button" id="reset-button" class="secondary-button">Сбросить</button>
-          <button type="submit" id="save-button">Сохранить</button>
+          <button type="button" id="reset-button" class="secondary-button" data-i18n="options.reset"></button>
+          <button type="submit" id="save-button" data-i18n="options.save"></button>
         </footer>
       </form>
     </main>

@@ -1,108 +1,136 @@
-# Журнал изменений
+# Changelog
 
-Здесь собраны заметные для пользователей изменения Selection Translator. Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии нумеруются по [SemVer](https://semver.org/lang/ru/).
+This file collects the user-visible changes of Selection Translator. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [SemVer](https://semver.org/).
 
-Текст раздела версии становится описанием GitHub Release, поэтому у каждой версии должен быть раздел с заголовком `## X.Y.Z - ГГГГ-ММ-ДД` и содержимым. Это проверяют тесты и CD.
+A version's section becomes the GitHub Release description, so every version needs a section headed `## X.Y.Z - YYYY-MM-DD` with content. The tests and CD check this.
+
+## Unreleased
+
+### Added
+
+- The interface is available in English, Russian and Spanish: the panel, the context menu, the popup and the settings page. By default it follows the browser language and falls back to English for any other language. The language can be chosen by hand in the new Interface section of the settings, and the change applies at once, including the panels on open tabs and the context menu.
+- The extension name and description in the browser are localized as well.
+- Translation errors name the provider that failed, for example "Google Translate returned error 503.", and the note after an automatic switch names the provider that stood in.
+- The translation in the panel is marked with its own language, so screen readers, hyphenation and spell-check treat it correctly.
+
+### Changed
+
+- The interface language now follows the browser. If your browser is not in Russian, the extension switches to English after the update; Russian can be chosen in Settings → Interface → Interface language.
+- English is now the main language of the project and its documentation. The Russian README is in `README.ru.md`.
+
+### Fixed
+
+- After an automatic switch to another provider, the note mentions a Google access limit only when there was one. On a Google error or a network failure it says that Google could not translate the text.
+- Changing the language in the translation panel no longer writes the whole settings back, so it cannot undo a change saved on the settings page at the same moment.
+
+### For developers
+
+- Interface texts moved from the code to the catalogs in `src/locales/` (`en.ts`, `ru.ts`, `es.ts`). Markup refers to them with `data-i18n` attributes, code with `t("key")`.
+- Translation failures carry a code and details (`provider`, `status`, `retryAfterMs`) instead of a ready message, and a successful fallback carries `fallbackFrom`, the code the main provider failed with. The UI words them in its language through `src/translation-messages.ts`.
+- The build writes `_locales/<locale>/messages.json` for the manifest from the same catalogs.
+- Each failure code has its own catalog key `error.<code>`, and provider names come from `provider.<id>`, so a new code without a text fails typecheck.
+- The settings page and the popup put their texts in place before reading the settings, from the locale shown last time or the browser language, so they never open blank.
+- When the interface language changes, the service worker rebuilds the context menu from the change itself, without reading the settings. If the settings cannot be read at install or startup, the menu is still created, in the browser language.
 
 ## 1.4.0 - 2026-10-19
 
-### Добавлено
+### Added
 
-- Кнопка `⇄` в панели действий теперь переводит и копирует выделенный текст одним нажатием. Раньше она копировала уже готовый перевод и была недоступна, пока перевода нет, а панель перевода открывалась поверх неё.
-- Новые значки расширения. На странице настроек логотип больше не заключён в круглую рамку, в popup у него нет скруглённых углов, а значок в панели над выделением без тёмной подложки.
+- The `⇄` button on the action toolbar now translates and copies the selected text with one press. Before, it copied an already finished translation, was unavailable while there was none, and the translation panel opened over it.
+- New extension icons. On the settings page the logo is no longer in a round frame, in the popup it has no rounded corners, and the icon on the toolbar above the selection has no dark backing.
 
-### Изменено
+### Changed
 
-- Прозрачность панели по умолчанию 75 % с размытием фона страницы под ней. Ползунок в настройках теперь идёт от 25 до 100 %, значение 100 % полностью отключает размытие. Если вы ни разу не сохраняли настройки, панель станет полупрозрачной сама. Если сохраняли (на странице настроек, переключением темы или просто сменой языка в окне перевода), останется прежнее значение: в 1.3.0 по умолчанию было 100 %, то есть без размытия, и любое из этих действий записывало его целиком. Если панель осталась непрозрачной, переместите ползунок прозрачности на странице настроек.
-- Пакет расширения стал меньше: в него попадают только значки, которые расширение загружает. Файл для витрины Chrome Web Store и SVG-исходник значка 16 px остались в репозитории.
+- The default panel opacity is 75 % with the page behind it blurred. The slider in the settings now goes from 25 to 100 %, and 100 % turns the blur off completely. If you never saved the settings, the panel becomes translucent by itself. If you did (on the settings page, by switching the theme, or just by changing the language in the translation window), the previous value stays: the 1.3.0 default was 100 %, that is, no blur, and any of these actions wrote it in full. If the panel stayed opaque, move the opacity slider on the settings page.
+- The extension package is smaller: it contains only the icons the extension loads. The Chrome Web Store listing file and the SVG source of the 16 px icon stay in the repository.
 
-### Исправлено
+### Fixed
 
-- Кнопка `⇄` копирует только тот перевод, который пришёл для текущего открытого окна:
-  - если окно перевода закрыли раньше, чем пришёл ответ, ответ игнорируется и буфер обмена не меняется;
-  - если за время ожидания вкладка потеряла фокус, перевод не копируется, чтобы не затереть то, что вы скопировали в это время, а окно подсказывает нажать `⧉`.
-- Короткие сообщения о копировании на кнопке `Перевести` и в окне перевода больше не остаются на месте при быстрых повторных нажатиях, а пришедший за это время перевод сохраняет своё примечание.
+- The `⇄` button copies only the translation that arrived for the currently open window:
+  - if the translation window was closed before the reply came, the reply is ignored and the clipboard does not change;
+  - if the tab lost focus while waiting, the translation is not copied, so that it does not overwrite what you copied meanwhile, and the window suggests pressing `⧉`.
+- Short copy messages on the `Translate` button and in the translation window no longer get stuck on quick repeated presses, and a translation that arrived meanwhile keeps its note.
 
-### Для разработчиков
+### For developers
 
-- Линтер и форматтер Biome подключены к `npm run verify`.
-- Тесты, читающие файлы проекта, больше не падают на Windows.
-- Ключ кэша собирается без «сырого» NUL-байта в исходнике, поэтому git снова показывает диффы `src/cache.ts`.
-- `package-lock.json` приведён в соответствие версии пакета. Версия в `package.json`, `manifest.json` и `package-lock.json` теперь проверяется тестом.
-- Текст GitHub Release теперь берётся из раздела версии в `CHANGELOG.md`.
+- The Biome linter and formatter are part of `npm run verify`.
+- Tests that read project files no longer fail on Windows.
+- The cache key is built without a raw NUL byte in the source, so git shows diffs of `src/cache.ts` again.
+- `package-lock.json` matches the package version. The versions in `package.json`, `manifest.json` and `package-lock.json` are now checked by a test.
+- The GitHub Release text now comes from the version's section in `CHANGELOG.md`.
 
 ## 1.3.0 - 2026-08-27
 
-Включает изменения 1.2.0, которая отдельным релизом не выходила.
+Includes the changes of 1.2.0, which was not released separately.
 
-### Добавлено
+### Added
 
-- Настройка прозрачности панели от 50 до 100 % с размытием фона. Просвечивает только фон: текст, рамки и тени остаются плотными.
-- Страница настроек разбита на четыре раздела с описаниями. Поля провайдера показываются только для выбранного сервиса, исходный язык появляется при выключенном автоопределении. Кнопка «Сохранить» активна, когда есть несохранённые изменения, панель действий закреплена внизу окна, а ползунок прозрачности сопровождается живым превью панели.
-- Перед переводом выделенный текст очищается от табличных палок, маркеров списков, мягких переносов и разрывов строк, а слова, разорванные переносом, склеиваются.
+- A panel opacity setting from 50 to 100 % with a blurred background. Only the background shows through: text, borders and shadows stay opaque.
+- The settings page is split into four sections with descriptions. The provider fields are shown only for the chosen service, and the source language appears when auto-detection is off. The Save button is active when there are unsaved changes, the action bar is pinned to the bottom of the window, and the opacity slider comes with a live preview of the panel.
+- Before translation, the selected text is cleaned of table pipes, list markers, soft hyphens and line breaks, and words split by hyphenation are joined back.
 
-### Изменено
+### Changed
 
-- Панель перевода переработана: текст набран 15 пикселями с межстрочным 1.55, пока идёт запрос, виден скелет из трёх строк вместо одинокой надписи, у кнопок появились состояния нажатия и фокуса с клавиатуры, а панель открывается коротким появлением на 170 мс, которое отключается при `prefers-reduced-motion`.
+- The translation panel is redesigned: the text is set at 15 pixels with a 1.55 line height, a three-line skeleton shows while the request runs instead of a lone caption, buttons have pressed and keyboard focus states, and the panel opens with a short 170 ms appearance that `prefers-reduced-motion` turns off.
 
-### Исправлено
+### Fixed
 
-- Текст перевода можно выделять мышью. Выделение внутри панели больше не считается выделением на странице, поэтому не сбрасывает кнопки и не закрывает панель, а страница, запрещающая выделение, не может его отнять.
-- Если страница не дала доступ к буферу обмена, копирование идёт запасным способом, а когда не получается и он, расширение сообщает, что делать.
+- The translation text can be selected with the mouse. A selection inside the panel no longer counts as a selection on the page, so it does not reset the buttons or close the panel, and a page that forbids selection cannot take it away.
+- If the page denied clipboard access, copying goes a fallback way, and when that fails too, the extension says what to do.
 
 ## 1.2.0 - 2026-08-27
 
-Отдельным релизом не выходила, изменения вошли в 1.3.0.
+Not released separately; the changes went into 1.3.0.
 
-### Изменено
+### Changed
 
-- Google-провайдер устойчив к ограничению доступа по IP (ответ 429 со страницей «Sorry... automated queries»):
-  - запрос идёт по цепочке из трёх адресов Google, начиная с `clients5.google.com`, который отвечает даже там, где `translate.googleapis.com` уже отдаёт 429;
-  - текст уходит в теле POST-запроса, а не в URL: длинный GET-адрес Google отклонял с ошибкой 400 примерно от 2500 знаков кириллицы;
-  - запросы разнесены по времени с джиттером, учитывается `Retry-After`, а после 429 включается пауза вместо повторных обращений к заблокированному адресу;
-  - переводы кэшируются на 30 минут, одинаковые параллельные запросы склеиваются в один.
-- Ограничение выдаётся отдельной ошибкой с подсказкой вместо голого кода статуса.
+- The Google provider withstands access limits per IP (a 429 reply with a "Sorry... automated queries" page):
+  - the request goes along a chain of three Google addresses, starting with `clients5.google.com`, which answers even where `translate.googleapis.com` already returns 429;
+  - the text is sent in the body of a POST request, not in the URL: Google rejected a long GET address with error 400 from about 2500 Cyrillic characters;
+  - requests are spaced out in time with jitter, `Retry-After` is respected, and after a 429 a pause starts instead of repeated requests to the blocked address;
+  - translations are cached for 30 minutes, and identical parallel requests are merged into one.
+- The limit is reported as a separate error with a hint instead of a bare status code.
 
-### Добавлено
+### Added
 
-- Автоматический переход на Yandex Cloud Translate или свой LibreTranslate-эндпоинт, если Google ограничил доступ, а ключ или эндпоинт заданы. Отключается галочкой в настройках.
+- An automatic switch to Yandex Cloud Translate or your own LibreTranslate endpoint when Google limits access and a key or an endpoint is set. It is turned off with a switch in the settings.
 
-### Разрешения
+### Permissions
 
-- В `host_permissions` добавлен `https://clients5.google.com/*`, поэтому Chrome попросит подтвердить обновлённые разрешения.
+- `https://clients5.google.com/*` is added to `host_permissions`, so Chrome asks to confirm the updated permissions.
 
 ## 1.1.1 - 2026-07-03
 
-### Удалено
+### Removed
 
-- Экспериментальный провайдер Yandex web: он требовал подмены сетевых заголовков. Yandex Cloud Translate остаётся основным Yandex-провайдером.
-- Разрешение `declarativeNetRequestWithHostAccess` и доступ к `translate.yandex.ru` и `translate.yandex.net`: без Yandex web они не нужны. Разрешений стало меньше.
+- The experimental Yandex web provider: it needed network header rewriting. Yandex Cloud Translate stays the main Yandex provider.
+- The `declarativeNetRequestWithHostAccess` permission and access to `translate.yandex.ru` and `translate.yandex.net`: without Yandex web they are not needed. There are fewer permissions now.
 
-### Изменено
+### Changed
 
-- У Yandex Cloud и LibreTranslate теперь отдельные поля API-ключа. Если раньше был сохранён общий ключ, расширение перенесёт его в ключ активного провайдера, а после сохранения настроек удалит старое поле из хранилища.
-- Адрес своего LibreTranslate-эндпоинта с логином и паролем в самом URL отклоняется: принимаются только `http` и `https` без учётных данных.
+- Yandex Cloud and LibreTranslate now have separate API key fields. If a shared key was saved before, the extension moves it to the key of the active provider, and removes the old field from storage after the settings are saved.
+- A LibreTranslate endpoint address with a login and password in the URL itself is rejected: only `http` and `https` without credentials are accepted.
 
-### Безопасность
+### Security
 
-- Нажатия на панель и смена языка обрабатываются только для настоящих действий пользователя, а не для событий, созданных скриптом страницы.
-- Фоновый скрипт принимает сообщения только от content script этого расширения.
+- Clicks on the panel and language changes are handled only for real user actions, not for events created by a page script.
+- The background script accepts messages only from this extension's content script.
 
 ## 1.1.0 - 2026-06-18
 
-### Изменено
+### Changed
 
-- Расширение переписано на TypeScript и собирается через esbuild в папку `dist/`. Для разработки теперь нужно выполнить `npm ci` и `npm run build`, а в браузер загружать `dist/`.
+- The extension is rewritten in TypeScript and built with esbuild into the `dist/` folder. Development now needs `npm ci` and `npm run build`, and the browser loads `dist/`.
 
 ## 1.0.0 - 2026-06-15
 
-Первый релиз.
+The first release.
 
-### Добавлено
+### Added
 
-- Плавающая панель действий рядом с выделенным текстом.
-- Перевод в небольшом окне со скроллом для длинных фрагментов.
-- Копирование исходного текста и готового перевода.
-- Пункты контекстного меню браузера для выделенного текста.
-- Настройки провайдера, языка перевода, лимита символов и поведения панели, светлая и тёмная тема страницы настроек.
-- Провайдеры: Google web, Yandex web, Yandex Cloud Translate и эндпоинт, совместимый с LibreTranslate.
+- A floating action toolbar next to the selected text.
+- Translation in a small window that scrolls for long fragments.
+- Copying the source text and the finished translation.
+- Browser context menu items for selected text.
+- Settings for the provider, the target language, the character limit and the panel behavior, and a light and dark theme of the settings page.
+- Providers: Google web, Yandex web, Yandex Cloud Translate and a LibreTranslate-compatible endpoint.

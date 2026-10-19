@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Selection Translator</title>
+    <title data-i18n="app.name"></title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
@@ -11,23 +11,23 @@
       <header class="popup-header">
         <img class="brand-mark" src="../assets/icon.svg" alt="" aria-hidden="true">
         <div>
-          <h1>Selection Translator</h1>
-          <p id="status-line">Загрузка...</p>
+          <h1 data-i18n="app.name"></h1>
+          <p id="status-line" data-i18n="popup.loading"></p>
         </div>
       </header>
 
       <dl class="settings-summary">
         <div>
-          <dt>Язык</dt>
+          <dt data-i18n="popup.language"></dt>
           <dd id="target-language">-</dd>
         </div>
         <div>
-          <dt>Провайдер</dt>
+          <dt data-i18n="popup.provider"></dt>
           <dd id="provider-status">-</dd>
         </div>
       </dl>
 
-      <button type="button" id="open-options">Настройки</button>
+      <button type="button" id="open-options" data-i18n="common.settings"></button>
     </main>
 
     <script type="module" src="popup.js"></script>

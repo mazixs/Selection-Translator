@@ -4,7 +4,7 @@ This file collects the user-visible changes of Selection Translator. The format 
 
 A version's section becomes the GitHub Release description, so every version needs a section headed `## X.Y.Z - YYYY-MM-DD` with content. The tests and CD check this.
 
-## Unreleased
+## 1.5.0 - 2026-10-19
 
 ### Added
 

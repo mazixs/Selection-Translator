@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { buildCacheKey, createTranslationCache } from "../src/cache.js";
@@ -14,6 +15,24 @@ test("buildCacheKey separates provider and language pair", () => {
   assert.notEqual(buildCacheKey(base), buildCacheKey({ ...base, targetLanguage: "de" }));
   assert.notEqual(buildCacheKey(base), buildCacheKey({ ...base, provider: "yandex" }));
   assert.equal(buildCacheKey(base), buildCacheKey({ ...base }));
+});
+
+test("buildCacheKey joins the parts with a NUL separator", () => {
+  const key = buildCacheKey({
+    provider: "google",
+    sourceLanguage: "auto",
+    targetLanguage: "ru",
+    text: "Hello",
+  });
+
+  assert.equal(key, "google\u0000auto\u0000ru\u0000Hello");
+});
+
+test("cache.ts spells the separator as an escape, not a raw NUL byte", () => {
+  const source = readFileSync(new URL("../src/cache.ts", import.meta.url), "utf8");
+
+  // A raw NUL byte makes git classify the file as binary.
+  assert.equal(source.includes("\u0000"), false);
 });
 
 test("createTranslationCache returns a stored value and drops it after the TTL", () => {

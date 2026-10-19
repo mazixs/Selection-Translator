@@ -1,3 +1,4 @@
+import { getRequiredElement } from "./dom.js";
 import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import { shouldRefreshSelectionForKey } from "./keyboard.js";
 import {
@@ -48,20 +49,6 @@ import {
 
   function isTrustedUserEvent(event: Event): boolean {
     return event.isTrusted === true;
-  }
-
-  function getRequiredElement<T extends Element>(
-    parent: ParentNode,
-    selector: string,
-    constructor: { new (...args: never[]): T },
-  ): T {
-    const element = parent.querySelector(selector);
-
-    if (!(element instanceof constructor)) {
-      throw new Error(`Missing required element: ${selector}`);
-    }
-
-    return element;
   }
 
   function getToolbarAction(action: string | undefined): ToolbarAction | null {
@@ -284,7 +271,7 @@ import {
 
     nextRoot.append(panel);
 
-    getRequiredElement(panel, ".stx-panel-close", HTMLButtonElement).addEventListener(
+    getRequiredElement(".stx-panel-close", HTMLButtonElement, panel).addEventListener(
       "click",
       (event) => {
         if (!isTrustedUserEvent(event)) {
@@ -294,7 +281,7 @@ import {
         hidePanel();
       },
     );
-    getRequiredElement(panel, ".stx-panel-copy", HTMLButtonElement).addEventListener(
+    getRequiredElement(".stx-panel-copy", HTMLButtonElement, panel).addEventListener(
       "click",
       (event) => {
         if (!isTrustedUserEvent(event)) {
@@ -304,7 +291,7 @@ import {
         void copyTranslation();
       },
     );
-    getRequiredElement(panel, ".stx-copy-translation", HTMLButtonElement).addEventListener(
+    getRequiredElement(".stx-copy-translation", HTMLButtonElement, panel).addEventListener(
       "click",
       (event) => {
         if (!isTrustedUserEvent(event)) {
@@ -314,7 +301,7 @@ import {
         void copyTranslation();
       },
     );
-    getRequiredElement(panel, ".stx-language-select", HTMLSelectElement).addEventListener(
+    getRequiredElement(".stx-language-select", HTMLSelectElement, panel).addEventListener(
       "change",
       handleLanguageChange,
     );
@@ -484,8 +471,8 @@ import {
   function setPanelState(kind: PanelState, text: string, note = "") {
     const nextPanel = ensurePanel();
     nextPanel.dataset.state = kind;
-    getRequiredElement(nextPanel, ".stx-panel-text", HTMLDivElement).textContent = text;
-    getRequiredElement(nextPanel, ".stx-panel-note", HTMLDivElement).textContent = note;
+    getRequiredElement(".stx-panel-text", HTMLDivElement, nextPanel).textContent = text;
+    getRequiredElement(".stx-panel-note", HTMLDivElement, nextPanel).textContent = note;
   }
 
   function setButtonEnabled(action: ToolbarAction, enabled: boolean) {
@@ -551,9 +538,9 @@ import {
 
     const settings = getSettings();
     const languageSelect = getRequiredElement(
-      ensurePanel(),
       ".stx-language-select",
       HTMLSelectElement,
+      ensurePanel(),
     );
     languageSelect.value = settings.targetLanguage || DEFAULT_SETTINGS.targetLanguage;
 
@@ -757,11 +744,7 @@ import {
       applyAppearance();
 
       if (changes?.targetLanguage && panel && !panel.classList.contains(HIDDEN_CLASS)) {
-        const languageSelect = getRequiredElement(
-          panel,
-          ".stx-language-select",
-          HTMLSelectElement,
-        );
+        const languageSelect = getRequiredElement(".stx-language-select", HTMLSelectElement, panel);
         languageSelect.value = cachedSettings.targetLanguage;
       }
     });

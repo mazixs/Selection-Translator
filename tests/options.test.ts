@@ -90,7 +90,7 @@ test("options page offers panel opacity with a live preview", () => {
   const optionsCss = readFileSync(join(ROOT, "options/options.css"), "utf8");
   const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
 
-  assert.match(optionsHtml, /name="panelOpacity" type="range" min="50" max="100"/);
+  assert.match(optionsHtml, /name="panelOpacity" type="range" min="25" max="100"/);
   assert.equal(optionsHtml.includes('id="opacity-output"'), true);
   assert.equal(optionsHtml.includes('class="opacity-preview"'), true);
   assert.match(optionsCss, /rgb\(255 255 255 \/ var\(--preview-alpha, 1\)\)/);

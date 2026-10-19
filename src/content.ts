@@ -1,6 +1,6 @@
 import { getRequiredElement } from "./dom.js";
-import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import { shouldRefreshSelectionForKey } from "./keyboard.js";
+import { getRuntimeMessage, type RuntimeMessage } from "./messages.js";
 import {
   clampPanelOpacity,
   DEFAULT_SETTINGS,
@@ -10,10 +10,7 @@ import {
 } from "./settings.js";
 import { normalizeSelectionText } from "./text.js";
 import type { TranslationResult } from "./translator.js";
-import {
-  isSelectableElement,
-  isSelectionInsideContainer,
-} from "./ui-selection.js";
+import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.js";
 
 (() => {
   const ROOT_ID = "selection-translator-root";
@@ -27,7 +24,10 @@ import {
     | "settings"
     | "close";
   type PanelState = "loading" | "ready" | "error";
-  type UsefulRect = Pick<DOMRect, "left" | "right" | "top" | "bottom" | "width" | "height">;
+  type UsefulRect = Pick<
+    DOMRect,
+    "left" | "right" | "top" | "bottom" | "width" | "height"
+  >;
   type SelectionSnapshot = {
     text: string;
     rect: UsefulRect;
@@ -291,16 +291,17 @@ import {
         void copyTranslation();
       },
     );
-    getRequiredElement(".stx-copy-translation", HTMLButtonElement, panel).addEventListener(
-      "click",
-      (event) => {
-        if (!isTrustedUserEvent(event)) {
-          return;
-        }
+    getRequiredElement(
+      ".stx-copy-translation",
+      HTMLButtonElement,
+      panel,
+    ).addEventListener("click", (event) => {
+      if (!isTrustedUserEvent(event)) {
+        return;
+      }
 
-        void copyTranslation();
-      },
-    );
+      void copyTranslation();
+    });
     getRequiredElement(".stx-language-select", HTMLSelectElement, panel).addEventListener(
       "change",
       handleLanguageChange,
@@ -424,8 +425,8 @@ import {
       const maxLeft = window.innerWidth - box.width - viewportPadding;
       const maxTop = window.innerHeight - box.height - viewportPadding;
 
-      let left;
-      let top;
+      let left: number;
+      let top: number;
 
       if (mode === "panel" && rect.right + box.width + gap < window.innerWidth) {
         left = rect.right + gap;
@@ -476,9 +477,7 @@ import {
   }
 
   function setButtonEnabled(action: ToolbarAction, enabled: boolean) {
-    const button = toolbar?.querySelector<HTMLButtonElement>(
-      `[data-action="${action}"]`,
-    );
+    const button = toolbar?.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
     if (button) {
       button.disabled = !enabled;
     }
@@ -573,7 +572,8 @@ import {
   }
 
   async function copySelectedText(forcedText = "") {
-    const text = forcedText || currentSelection?.text || getSelectionSnapshot()?.text || "";
+    const text =
+      forcedText || currentSelection?.text || getSelectionSnapshot()?.text || "";
     const copied = await copyText(text);
     flashToolbar(copied ? "Скопировано" : "Не вышло");
   }
@@ -744,7 +744,11 @@ import {
       applyAppearance();
 
       if (changes?.targetLanguage && panel && !panel.classList.contains(HIDDEN_CLASS)) {
-        const languageSelect = getRequiredElement(".stx-language-select", HTMLSelectElement, panel);
+        const languageSelect = getRequiredElement(
+          ".stx-language-select",
+          HTMLSelectElement,
+          panel,
+        );
         languageSelect.value = cachedSettings.targetLanguage;
       }
     });

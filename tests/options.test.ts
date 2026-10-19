@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -45,9 +45,14 @@ test("options script resolves system theme and updates the theme toggle icon", (
 test("options script persists theme toggle without saving unrelated form edits", () => {
   const optionsScript = readFileSync(join(ROOT, "options/options.ts"), "utf8");
 
-  assert.equal(optionsScript.includes("const storedSettings = await loadSettings();"), true);
   assert.equal(
-    optionsScript.includes("saveSettings({ ...storedSettings, themePreference: nextPreference })"),
+    optionsScript.includes("const storedSettings = await loadSettings();"),
+    true,
+  );
+  assert.equal(
+    optionsScript.includes(
+      "saveSettings({ ...storedSettings, themePreference: nextPreference })",
+    ),
     true,
   );
 });
@@ -57,7 +62,7 @@ test("options page requests optional origin permission for custom LibreTranslate
 
   assert.equal(optionsScript.includes("function getEndpointOriginPattern"), true);
   assert.equal(optionsScript.includes("chrome.permissions?.request"), true);
-  assert.equal(optionsScript.includes("provider !== \"libretranslate\""), true);
+  assert.equal(optionsScript.includes('provider !== "libretranslate"'), true);
   assert.equal(optionsScript.includes("origins: [originPattern]"), true);
 });
 
@@ -107,7 +112,10 @@ test("options page shows only the fields of the selected provider", () => {
 
   assert.equal(optionsHtml.includes('data-shown-when="manual-source"'), true);
   assert.match(optionsScript, /function applyDisclosure/);
-  assert.match(optionsScript, /group\.hidden = group\.dataset\.provider !== fields\.provider\.value/);
+  assert.match(
+    optionsScript,
+    /group\.hidden = group\.dataset\.provider !== fields\.provider\.value/,
+  );
   assert.match(optionsScript, /field\.hidden = fields\.autoDetectSource\.checked/);
 });
 

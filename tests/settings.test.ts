@@ -1,10 +1,10 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import {
+  clampMaxCharacters,
   clampPanelOpacity,
   DEFAULT_SETTINGS,
-  clampMaxCharacters,
   mergeSettings,
   saveSettings,
 } from "../src/settings.js";

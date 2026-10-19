@@ -4,13 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "tsx scripts/build.ts",
-    "verify": "npm run typecheck && npm test && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build",
     "pack": "npm run build && mkdir -p outputs && rm -f outputs/selection-translator-extension.zip && cd dist && zip -r ../outputs/selection-translator-extension.zip ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/chrome": "^0.1.43",
     "@types/node": "^25.9.3",
     "esbuild": "^0.28.1",

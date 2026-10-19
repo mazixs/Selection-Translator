@@ -1,12 +1,12 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import {
   createTranslateRuntime,
   limitTextForTranslation,
   normalizeLibreTranslateUrl,
-  translateText,
   type TranslateRuntime,
+  translateText,
 } from "../src/translator.js";
 
 type FetchCall = {
@@ -175,10 +175,7 @@ test("translateText posts the selection to the Chrome dictionary endpoint first"
   assert.equal(requestUrl.searchParams.get("hl"), "ru");
   assert.equal(requestUrl.searchParams.has("q"), false);
   assert.equal(firstCall.init.method, "POST");
-  assert.equal(
-    new URLSearchParams(String(firstCall.init.body)).get("q"),
-    "Hello world",
-  );
+  assert.equal(new URLSearchParams(String(firstCall.init.body)).get("q"), "Hello world");
   assert.equal(
     new Headers(firstCall.init.headers).get("Accept-Language"),
     "ru,ru-RU;q=0.9,en;q=0.8",

@@ -1,23 +1,15 @@
+import { buildCacheKey, createTranslationCache, type TranslationCache } from "./cache.js";
+import { GOOGLE_ROUTES, getSourceLanguage, parseGoogleResponse } from "./google.js";
 import {
-  buildCacheKey,
-  createTranslationCache,
-  type TranslationCache,
-} from "./cache.js";
-import {
-  GOOGLE_ROUTES,
-  getSourceLanguage,
-  parseGoogleResponse,
-} from "./google.js";
-import {
+  type Clock,
+  type Cooldown,
   createCooldown,
   createPacer,
   formatCooldownHint,
   getBackoffMs,
+  type Pacer,
   parseRetryAfterMs,
   RATE_LIMIT_COOLDOWN_MS,
-  type Clock,
-  type Cooldown,
-  type Pacer,
   type Random,
   type Sleep,
 } from "./pacing.js";
@@ -165,9 +157,7 @@ export function normalizeLibreTranslateUrl(endpoint: unknown): string {
 
     url.hash = "";
     const pathname = url.pathname.replace(/\/+$/, "");
-    url.pathname = pathname.endsWith("/translate")
-      ? pathname
-      : `${pathname}/translate`;
+    url.pathname = pathname.endsWith("/translate") ? pathname : `${pathname}/translate`;
 
     return url.toString();
   } catch {
@@ -273,9 +263,7 @@ function getRateLimitFailure(
   );
 }
 
-async function translateWithGoogle(
-  context: ProviderContext,
-): Promise<TranslationResult> {
+async function translateWithGoogle(context: ProviderContext): Promise<TranslationResult> {
   const { limited, settings, fetchImpl, runtime } = context;
   const cooldownLeft = runtime.cooldown.remaining(GOOGLE_COOLDOWN_KEY);
 
@@ -291,9 +279,7 @@ async function translateWithGoogle(
   let sawRateLimit = false;
   let retryAfterMs = 0;
 
-  for (let index = 0; index < GOOGLE_ROUTES.length; index += 1) {
-    const route = GOOGLE_ROUTES[index]!;
-
+  for (const [index, route] of GOOGLE_ROUTES.entries()) {
     if (index > 0) {
       await runtime.sleep(getBackoffMs(index - 1, retryAfterMs, runtime.random));
     }
@@ -362,9 +348,7 @@ async function translateWithGoogle(
   return failure;
 }
 
-async function translateWithYandex(
-  context: ProviderContext,
-): Promise<TranslationResult> {
+async function translateWithYandex(context: ProviderContext): Promise<TranslationResult> {
   const { limited, settings, fetchImpl, runtime } = context;
   const body: YandexCloudBody = {
     targetLanguageCode: settings.targetLanguage,
@@ -501,9 +485,7 @@ function runProvider(
   return translateWithLibreTranslate(context);
 }
 
-async function translateOnce(
-  context: LibreTranslateContext,
-): Promise<TranslationResult> {
+async function translateOnce(context: LibreTranslateContext): Promise<TranslationResult> {
   const { settings, endpoint, limited } = context;
   const result = await runProvider(settings.provider, context);
 

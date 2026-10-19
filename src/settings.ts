@@ -1,7 +1,4 @@
-export type TranslationProvider =
-  | "google"
-  | "yandex"
-  | "libretranslate";
+export type TranslationProvider = "google" | "yandex" | "libretranslate";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -62,10 +59,7 @@ export function clampMaxCharacters(value: unknown): number {
     return DEFAULT_SETTINGS.maxCharacters;
   }
 
-  return Math.min(
-    MAX_MAX_CHARACTERS,
-    Math.max(MIN_MAX_CHARACTERS, Math.trunc(parsed)),
-  );
+  return Math.min(MAX_MAX_CHARACTERS, Math.max(MIN_MAX_CHARACTERS, Math.trunc(parsed)));
 }
 
 export function clampPanelOpacity(value: unknown): number {
@@ -75,10 +69,7 @@ export function clampPanelOpacity(value: unknown): number {
     return DEFAULT_SETTINGS.panelOpacity;
   }
 
-  return Math.min(
-    MAX_PANEL_OPACITY,
-    Math.max(MIN_PANEL_OPACITY, Math.round(parsed)),
-  );
+  return Math.min(MAX_PANEL_OPACITY, Math.max(MIN_PANEL_OPACITY, Math.round(parsed)));
 }
 
 function getStringSetting(
@@ -99,9 +90,7 @@ function getOptionalStringSetting(value: unknown): string {
 }
 
 function getProvider(value: unknown): TranslationProvider {
-  return value === "libretranslate" ||
-    value === "google" ||
-    value === "yandex"
+  return value === "libretranslate" || value === "google" || value === "yandex"
     ? value
     : DEFAULT_SETTINGS.provider;
 }
@@ -144,9 +133,7 @@ export function mergeSettings(settings: SettingsInput = {}): Settings {
     showSelectionToolbar: Boolean(
       settings.showSelectionToolbar ?? DEFAULT_SETTINGS.showSelectionToolbar,
     ),
-    keepPanelOpen: Boolean(
-      settings.keepPanelOpen ?? DEFAULT_SETTINGS.keepPanelOpen,
-    ),
+    keepPanelOpen: Boolean(settings.keepPanelOpen ?? DEFAULT_SETTINGS.keepPanelOpen),
     autoFallbackProvider: Boolean(
       settings.autoFallbackProvider ?? DEFAULT_SETTINGS.autoFallbackProvider,
     ),

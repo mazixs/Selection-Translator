@@ -29,12 +29,7 @@
   --radius-lg: 14px;
   --radius: 10px;
   --radius-sm: 8px;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 16px;
 }
 
@@ -274,9 +269,9 @@ h1 {
   line-height: 1.35;
 }
 
-.field > .field-hint,
 .field-hint,
-.provider-hint {
+.provider-hint,
+.field > .field-hint {
   color: var(--muted-text);
   font-size: 13px;
   font-weight: 400;

@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -27,7 +27,10 @@ test("content script guards against stale translation responses", () => {
 test("content script caches settings and listens for storage changes", () => {
   const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
-  assert.match(contentScript, /let cachedSettings: Settings = \{ \.\.\.DEFAULT_SETTINGS \};/);
+  assert.match(
+    contentScript,
+    /let cachedSettings: Settings = \{ \.\.\.DEFAULT_SETTINGS \};/,
+  );
   assert.match(contentScript, /async function refreshSettings/);
   assert.equal(contentScript.includes("chrome.storage.onChanged.addListener"), true);
   assert.equal(contentScript.includes("changes?.targetLanguage"), true);
@@ -38,7 +41,10 @@ test("selection toolbar uses the extension icon instead of a Yandex-like letter"
   const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
   assert.equal(contentScript.includes('badge.textContent = "Y"'), false);
-  assert.equal(contentScript.includes('chrome.runtime.getURL("assets/icon-32.png")'), true);
+  assert.equal(
+    contentScript.includes('chrome.runtime.getURL("assets/icon-32.png")'),
+    true,
+  );
 });
 
 test("content script ignores synthetic page events for privileged UI actions", () => {
@@ -81,7 +87,10 @@ test("panel text can be selected by hand while the toolbar keeps the page select
 test("copying falls back to a textarea and reports a failure", () => {
   const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
-  assert.match(contentScript, /async function copyText\(text: unknown\): Promise<boolean>/);
+  assert.match(
+    contentScript,
+    /async function copyText\(text: unknown\): Promise<boolean>/,
+  );
   assert.match(
     contentScript,
     /await navigator\.clipboard\.writeText\(value\);\s+return true;\s+\} catch \{/s,

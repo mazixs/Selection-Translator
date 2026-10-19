@@ -3,9 +3,9 @@ import {
   clampPanelOpacity,
   DEFAULT_SETTINGS,
   loadSettings,
-  saveSettings,
   type Settings,
   type SettingsInput,
+  saveSettings,
   type ThemePreference,
 } from "../src/settings.js";
 
@@ -38,9 +38,7 @@ const resetButton = getRequiredElement("#reset-button", HTMLButtonElement);
 const saveButton = getRequiredElement("#save-button", HTMLButtonElement);
 const opacityOutput = getRequiredElement("#opacity-output", HTMLOutputElement);
 const status = getRequiredElement("#status", HTMLSpanElement);
-const providerGroups = [
-  ...document.querySelectorAll<HTMLElement>(".provider-fields"),
-];
+const providerGroups = [...document.querySelectorAll<HTMLElement>(".provider-fields")];
 const manualSourceFields = [
   ...document.querySelectorAll<HTMLElement>('[data-shown-when="manual-source"]'),
 ];
@@ -63,9 +61,7 @@ function getResolvedTheme(themePreference: unknown): ResolvedTheme {
 }
 
 function getThemeToggleLabel(resolvedTheme: ResolvedTheme): string {
-  return resolvedTheme === "dark"
-    ? "Включить светлую тему"
-    : "Включить темную тему";
+  return resolvedTheme === "dark" ? "Включить светлую тему" : "Включить темную тему";
 }
 
 function applyThemePreference(themePreference: unknown) {
@@ -104,10 +100,7 @@ function fillForm(settings: Settings) {
 function applyPanelOpacity(value: unknown) {
   const opacity = clampPanelOpacity(value);
   opacityOutput.textContent = `${opacity}%`;
-  document.documentElement.style.setProperty(
-    "--preview-alpha",
-    String(opacity / 100),
-  );
+  document.documentElement.style.setProperty("--preview-alpha", String(opacity / 100));
 }
 
 /** Only the chosen provider's credentials are worth showing. */
@@ -174,7 +167,9 @@ function getEndpointOriginPattern(endpoint: unknown): string {
   }
 }
 
-async function requestLibreTranslatePermission(settings: SettingsInput): Promise<boolean> {
+async function requestLibreTranslatePermission(
+  settings: SettingsInput,
+): Promise<boolean> {
   if (
     settings.provider !== "libretranslate" ||
     typeof settings.endpoint !== "string" ||

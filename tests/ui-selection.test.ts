@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import test from "node:test";
 
 import {
   isSelectableElement,
@@ -17,10 +17,7 @@ function createElement(tagName: string, matchedSelectors: string[] = []) {
 }
 
 test("panel text and note stay selectable", () => {
-  assert.equal(
-    isSelectableElement(createElement("DIV", [SELECTABLE_SELECTOR])),
-    true,
-  );
+  assert.equal(isSelectableElement(createElement("DIV", [SELECTABLE_SELECTOR])), true);
 });
 
 test("toolbar buttons are not selectable, so the page selection survives", () => {
@@ -47,17 +44,11 @@ test("isSelectionInsideContainer detects a selection made inside the panel", () 
     true,
   );
   assert.equal(
-    isSelectionInsideContainer(
-      { anchorNode: pageNode, focusNode: panelNode },
-      container,
-    ),
+    isSelectionInsideContainer({ anchorNode: pageNode, focusNode: panelNode }, container),
     true,
   );
   assert.equal(
-    isSelectionInsideContainer(
-      { anchorNode: pageNode, focusNode: pageNode },
-      container,
-    ),
+    isSelectionInsideContainer({ anchorNode: pageNode, focusNode: pageNode }, container),
     false,
   );
 });
@@ -67,8 +58,5 @@ test("isSelectionInsideContainer tolerates a missing selection or container", ()
 
   assert.equal(isSelectionInsideContainer(null, container), false);
   assert.equal(isSelectionInsideContainer({}, container), false);
-  assert.equal(
-    isSelectionInsideContainer({ anchorNode: { id: "x" } }, null),
-    false,
-  );
+  assert.equal(isSelectionInsideContainer({ anchorNode: { id: "x" } }, null), false);
 });

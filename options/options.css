@@ -7,7 +7,6 @@
   --body-bg-fade: rgba(244, 246, 250, 0.88);
   --border: #e2e6ee;
   --border-strong: #d3dae6;
-  --brand-border: rgba(47, 111, 228, 0.18);
   --button-text: #ffffff;
   --control-bg: #ffffff;
   --control-border: #c9d1e0;
@@ -20,7 +19,6 @@
   --secondary-bg-hover: #dfe5ef;
   --secondary-text: #1d2330;
   --shadow-sm: 0 1px 2px rgba(18, 25, 38, 0.05);
-  --shadow-lg: 0 10px 24px rgba(18, 25, 38, 0.08);
   --status-text: #2f6a44;
   --status-pending-text: #8a5a12;
   --surface: #ffffff;
@@ -47,7 +45,6 @@
     --body-bg-fade: rgba(15, 17, 21, 0.88);
     --border: #272d37;
     --border-strong: #333b47;
-    --brand-border: rgba(127, 168, 255, 0.3);
     --button-text: #10141b;
     --control-bg: #14181e;
     --control-border: #3a424f;
@@ -60,7 +57,6 @@
     --secondary-bg-hover: #2c3442;
     --secondary-text: #eef1f7;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.45);
     --status-text: #8ad4a2;
     --status-pending-text: #e8bf72;
     --surface: #171b22;
@@ -77,7 +73,6 @@
   --body-bg-fade: rgba(15, 17, 21, 0.88);
   --border: #272d37;
   --border-strong: #333b47;
-  --brand-border: rgba(127, 168, 255, 0.3);
   --button-text: #10141b;
   --control-bg: #14181e;
   --control-border: #3a424f;
@@ -90,7 +85,6 @@
   --secondary-bg-hover: #2c3442;
   --secondary-text: #eef1f7;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.45);
   --status-text: #8ad4a2;
   --status-pending-text: #e8bf72;
   --surface: #171b22;
@@ -127,16 +121,9 @@ body {
 }
 
 .brand-mark {
-  background: var(--surface);
-  border: 1px solid var(--brand-border);
-  border-radius: 50%;
-  box-shadow: var(--shadow-lg);
-  box-sizing: border-box;
   display: block;
   flex: 0 0 auto;
   height: 48px;
-  object-fit: cover;
-  padding: 4px;
   width: 48px;
 }
 

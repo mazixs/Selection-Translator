@@ -41,10 +41,7 @@ test("selection toolbar uses the extension icon instead of a Yandex-like letter"
   const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
 
   assert.equal(contentScript.includes('badge.textContent = "Y"'), false);
-  assert.equal(
-    contentScript.includes('chrome.runtime.getURL("assets/icon-32.png")'),
-    true,
-  );
+  assert.equal(contentScript.includes('chrome.runtime.getURL("assets/icon.svg")'), true);
 });
 
 test("content script ignores synthetic page events for privileged UI actions", () => {

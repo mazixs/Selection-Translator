@@ -205,7 +205,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
 
     const icon = document.createElement("img");
     icon.className = "stx-badge-icon";
-    icon.src = chrome.runtime.getURL("assets/icon-32.png");
+    icon.src = chrome.runtime.getURL("assets/icon.svg");
     icon.alt = "";
     icon.decoding = "async";
     badge.append(icon);

@@ -72,6 +72,18 @@ test("manifest is Manifest V3 and references existing extension files", () => {
   }
 });
 
+test("manifest icons are PNGs of the size their key declares", () => {
+  const manifest = readManifest();
+
+  for (const [size, iconPath] of Object.entries(manifest.icons)) {
+    const png = readFileSync(join(ROOT, iconPath));
+    // The IHDR chunk always comes first: width and height sit at bytes 16 and 20.
+    assert.equal(png.toString("latin1", 1, 4), "PNG", iconPath);
+    assert.equal(png.readUInt32BE(16), Number(size), iconPath);
+    assert.equal(png.readUInt32BE(20), Number(size), iconPath);
+  }
+});
+
 test("manifest includes permissions needed for storage, context menu, and provider fetches", () => {
   const manifest = readManifest();
   const hostPermissions = manifest.host_permissions;
@@ -104,7 +116,7 @@ test("manifest exposes the content-script icon asset", () => {
   assert.deepEqual(manifest.action.default_icon, manifest.icons);
   assert.deepEqual(manifest.web_accessible_resources, [
     {
-      resources: ["assets/icon-32.png"],
+      resources: ["assets/icon.svg"],
       matches: ["http://*/*", "https://*/*"],
     },
   ]);

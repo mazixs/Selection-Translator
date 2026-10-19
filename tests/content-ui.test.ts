@@ -128,3 +128,88 @@ test("selection text is normalized before it reaches the provider", () => {
     /const text = normalizeSelectionText\(forcedText \|\| selection\?\.toString\(\)\);/,
   );
 });
+
+/** Source of a named function in the content script, found by balancing braces. */
+function getFunctionBody(source: string, signature: string): string {
+  const start = source.indexOf(signature);
+  assert.notEqual(start, -1, `${signature} not found`);
+
+  const open = source.indexOf("{", start + signature.length);
+  let depth = 0;
+
+  for (let index = open; index < source.length; index += 1) {
+    if (source[index] === "{") {
+      depth += 1;
+    } else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(open, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`${signature} has unbalanced braces`);
+}
+
+test("dismissing the panel invalidates the translation still in flight", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const body = getFunctionBody(contentScript, "function hidePanel(");
+
+  assert.match(body, /activeTranslationRequestId(\+\+| \+= 1)/);
+});
+
+test("openTranslationPanel reports success only after a current, successful translation", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const body = getFunctionBody(contentScript, "async function openTranslationPanel(");
+  const successReturn = body.indexOf("return true;");
+
+  assert.equal(body.indexOf("return true;", successReturn + 1), -1);
+  assert.match(body, /setPanelState\("ready"[^;]*;\s+return true;/);
+  assert.ok(body.indexOf("requestId !== activeTranslationRequestId") < successReturn);
+});
+
+test("translate-and-copy goes through the guarded flow, and panel copy has one entry point", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+
+  assert.match(
+    contentScript,
+    /await translateAndCopy\(\{\s+translate: \(\) => openTranslationPanel\(\)/,
+  );
+  assert.match(contentScript, /hasFocus: \(\) => document\.hasFocus\(\)/);
+  assert.match(
+    contentScript,
+    /function handlePanelCopyClick\(event: Event\) \{\s+if \(!isTrustedUserEvent\(event\)\)/s,
+  );
+  assert.equal((contentScript.match(/void copyTranslation\(\)/g) || []).length, 1);
+});
+
+test("flashes restore the resting state instead of reading back what they overwrote", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const panelFlash = getFunctionBody(contentScript, "function flashPanel(");
+  const toolbarFlash = getFunctionBody(contentScript, "function flashToolbar(");
+  const textRead = /\.textContent(?!\s*=[^=])/;
+
+  assert.equal(textRead.test(panelFlash), false);
+  assert.equal(textRead.test(toolbarFlash), false);
+  assert.match(panelFlash, /= panelNote;/);
+  assert.match(toolbarFlash, /= TRANSLATE_LABEL;/);
+});
+
+test("a new resting note or panel state cancels a pending flash", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const setNote = getFunctionBody(contentScript, "function setPanelNote(");
+  const setState = getFunctionBody(contentScript, "function setPanelState(");
+
+  assert.match(setNote, /clearTimeout\(panelFlashTimer\);/);
+  assert.match(setNote, /panelNote = note;/);
+  assert.match(setState, /setPanelNote\(/);
+});
+
+test("every copy attempt from the panel clears the not-copied hint", () => {
+  const contentScript = readFileSync(join(ROOT, "src/content.ts"), "utf8");
+  const clearHint = getFunctionBody(contentScript, "function clearCopyHint(");
+
+  assert.match(clearHint, /setPanelNote\(resultNote\);/);
+  assert.match(contentScript, /case "copied":\s+clearCopyHint\(\);/);
+  assert.match(contentScript, /case "failed":\s+clearCopyHint\(\);/);
+});

@@ -9,6 +9,7 @@ import {
   type SettingsInput,
 } from "./settings.js";
 import { normalizeSelectionText } from "./text.js";
+import { type CopyOutcome, translateAndCopy } from "./translate-copy.js";
 import type { TranslationResult } from "./translator.js";
 import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.js";
 
@@ -16,11 +17,12 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   const ROOT_ID = "selection-translator-root";
   const HIDDEN_CLASS = "stx-hidden";
   const UI_Z_INDEX = 2147483647;
+  const TRANSLATE_LABEL = "Перевести";
 
   type ToolbarAction =
     | "translate"
     | "copy-selected"
-    | "copy-translation"
+    | "translate-copy"
     | "settings"
     | "close";
   type PanelState = "loading" | "ready" | "error";
@@ -41,6 +43,11 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   let selectionTimer: ReturnType<typeof setTimeout> | undefined;
   let ignoreSelectionUntil = 0;
   let activeTranslationRequestId = 0;
+  // The note the panel rests on, and the part of it that came with the result.
+  let panelNote = "";
+  let resultNote = "";
+  let panelFlashTimer: ReturnType<typeof setTimeout> | undefined;
+  let toolbarFlashTimer: ReturnType<typeof setTimeout> | undefined;
   let cachedSettings: Settings = { ...DEFAULT_SETTINGS };
 
   function isHTMLElement(target: EventTarget | null): target is HTMLElement {
@@ -54,7 +61,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   function getToolbarAction(action: string | undefined): ToolbarAction | null {
     return action === "translate" ||
       action === "copy-selected" ||
-      action === "copy-translation" ||
+      action === "translate-copy" ||
       action === "settings" ||
       action === "close"
       ? action
@@ -165,9 +172,9 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     toolbar.className = `stx-toolbar ${HIDDEN_CLASS}`;
     toolbar.setAttribute("role", "menu");
     toolbar.append(createBadge());
-    toolbar.append(createButton("Перевести", "translate"));
+    toolbar.append(createButton(TRANSLATE_LABEL, "translate"));
     toolbar.append(createIconButton("⧉", "copy-selected", "Скопировать выделенное"));
-    toolbar.append(createIconButton("⇄", "copy-translation", "Скопировать перевод"));
+    toolbar.append(createIconButton("⇄", "translate-copy", "Перевести и скопировать"));
     toolbar.append(createIconButton("⋮", "settings", "Настройки"));
     toolbar.append(createIconButton("×", "close", "Закрыть"));
     nextRoot.append(toolbar);
@@ -281,33 +288,26 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
         hidePanel();
       },
     );
-    getRequiredElement(".stx-panel-copy", HTMLButtonElement, panel).addEventListener(
-      "click",
-      (event) => {
-        if (!isTrustedUserEvent(event)) {
-          return;
-        }
-
-        void copyTranslation();
-      },
-    );
-    getRequiredElement(
-      ".stx-copy-translation",
-      HTMLButtonElement,
-      panel,
-    ).addEventListener("click", (event) => {
-      if (!isTrustedUserEvent(event)) {
-        return;
-      }
-
-      void copyTranslation();
-    });
+    for (const selector of [".stx-panel-copy", ".stx-copy-translation"]) {
+      getRequiredElement(selector, HTMLButtonElement, panel).addEventListener(
+        "click",
+        handlePanelCopyClick,
+      );
+    }
     getRequiredElement(".stx-language-select", HTMLSelectElement, panel).addEventListener(
       "change",
       handleLanguageChange,
     );
 
     return panel;
+  }
+
+  function handlePanelCopyClick(event: Event) {
+    if (!isTrustedUserEvent(event)) {
+      return;
+    }
+
+    void copyTranslation();
   }
 
   function getSelectionSnapshot(forcedText = ""): SelectionSnapshot | null {
@@ -398,7 +398,6 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
   function showToolbar(rect: UsefulRect) {
     const nextToolbar = ensureToolbar();
     nextToolbar.classList.remove(HIDDEN_CLASS);
-    setButtonEnabled("copy-translation", false);
     positionElement(nextToolbar, rect, "toolbar");
   }
 
@@ -462,6 +461,8 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
 
   function hidePanel() {
     panel?.classList.add(HIDDEN_CLASS);
+    // A reply still on its way must neither fill nor be copied from a dismissed panel.
+    activeTranslationRequestId++;
   }
 
   function hideAll() {
@@ -473,14 +474,16 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     const nextPanel = ensurePanel();
     nextPanel.dataset.state = kind;
     getRequiredElement(".stx-panel-text", HTMLDivElement, nextPanel).textContent = text;
-    getRequiredElement(".stx-panel-note", HTMLDivElement, nextPanel).textContent = note;
+    resultNote = note;
+    setPanelNote(note);
   }
 
-  function setButtonEnabled(action: ToolbarAction, enabled: boolean) {
-    const button = toolbar?.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
-    if (button) {
-      button.disabled = !enabled;
-    }
+  /** Sets the note the panel rests on, and drops a flash that would overwrite it. */
+  function setPanelNote(note: string) {
+    clearTimeout(panelFlashTimer);
+    panelNote = note;
+    getRequiredElement(".stx-panel-note", HTMLDivElement, ensurePanel()).textContent =
+      note;
   }
 
   async function handleToolbarAction(action: ToolbarAction) {
@@ -494,8 +497,15 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       return;
     }
 
-    if (action === "copy-translation") {
-      await copyTranslation();
+    if (action === "translate-copy") {
+      // The panel opens over the toolbar, so the copy has to ride on the same click.
+      showCopyOutcome(
+        await translateAndCopy({
+          translate: () => openTranslationPanel(),
+          hasFocus: () => document.hasFocus(),
+          copy: () => copyText(currentTranslation),
+        }),
+      );
       return;
     }
 
@@ -522,10 +532,11 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     return notes.filter(Boolean).join(" ");
   }
 
-  async function openTranslationPanel(forcedText = "") {
+  /** Resolves to true only when this request's translation is the one on screen. */
+  async function openTranslationPanel(forcedText = ""): Promise<boolean> {
     const snapshot = getSelectionSnapshot(forcedText) || currentSelection;
     if (!snapshot?.text) {
-      return;
+      return false;
     }
 
     currentSelection = snapshot;
@@ -533,7 +544,6 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     const requestId = ++activeTranslationRequestId;
     showPanel(snapshot.rect);
     setPanelState("loading", "Перевожу...");
-    setButtonEnabled("copy-translation", false);
 
     const settings = getSettings();
     const languageSelect = getRequiredElement(
@@ -549,7 +559,7 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
     });
 
     if (requestId !== activeTranslationRequestId) {
-      return;
+      return false;
     }
 
     if (!result) {
@@ -558,17 +568,17 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
         "Не удалось связаться с расширением.",
         "Попробуй обновить страницу и повторить.",
       );
-      return;
+      return false;
     }
 
     if (!result.ok) {
       setPanelState("error", result.message || "Не удалось перевести текст.");
-      return;
+      return false;
     }
 
     currentTranslation = result.translatedText;
-    setButtonEnabled("copy-translation", true);
     setPanelState("ready", result.translatedText, getPanelNote(result));
+    return true;
   }
 
   async function copySelectedText(forcedText = "") {
@@ -583,17 +593,46 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       return;
     }
 
-    const copied = await copyText(currentTranslation);
+    showCopyOutcome((await copyText(currentTranslation)) ? "copied" : "failed");
+  }
 
-    if (copied) {
-      flashPanel("Перевод скопирован");
-      return;
+  function showCopyOutcome(outcome: CopyOutcome) {
+    switch (outcome) {
+      case "not-ready":
+        // The panel already shows why (loading, error) or is gone, so there is nothing to add.
+        return;
+      case "unfocused":
+        // The hint stays until the next state: the user is likely to be away longer than a flash.
+        setPanelNote(
+          [
+            resultNote,
+            "Вкладка была не в фокусе, перевод не скопирован. Нажми ⧉ в панели.",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+        return;
+      case "copied":
+        clearCopyHint();
+        flashPanel("Перевод скопирован");
+        return;
+      case "failed":
+        clearCopyHint();
+        flashPanel(
+          "Страница не дала доступ к буферу обмена. Выдели перевод мышью и нажми Ctrl+C.",
+          5_000,
+        );
+        return;
+      default: {
+        const unhandled: never = outcome;
+        return unhandled;
+      }
     }
+  }
 
-    flashPanel(
-      "Страница не дала доступ к буферу обмена. Выдели перевод мышью и нажми Ctrl+C.",
-      5_000,
-    );
+  /** Any copy attempt from the panel has served the "press ⧉" hint, whatever its result. */
+  function clearCopyHint() {
+    setPanelNote(resultNote);
   }
 
   async function copyText(text: unknown): Promise<boolean> {
@@ -653,10 +692,12 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       return;
     }
 
-    const previous = translateButton.textContent;
+    // Restoring a constant label, not a captured one: a second flash would
+    // otherwise capture the first message and leave it on the button for good.
+    clearTimeout(toolbarFlashTimer);
     translateButton.textContent = message;
-    setTimeout(() => {
-      translateButton.textContent = previous;
+    toolbarFlashTimer = setTimeout(() => {
+      translateButton.textContent = TRANSLATE_LABEL;
     }, 900);
   }
 
@@ -666,10 +707,12 @@ import { isSelectableElement, isSelectionInsideContainer } from "./ui-selection.
       return;
     }
 
-    const previous = note.textContent;
+    // The note is restored from state, not from what it showed when the flash
+    // began, so a result that arrives meanwhile keeps its own note.
+    clearTimeout(panelFlashTimer);
     note.textContent = message;
-    setTimeout(() => {
-      note.textContent = previous;
+    panelFlashTimer = setTimeout(() => {
+      note.textContent = panelNote;
     }, durationMs);
   }
 

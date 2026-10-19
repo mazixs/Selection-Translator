@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { createTranslator } from "../src/i18n.js";
+import { describeTranslationFailure } from "../src/translation-messages.js";
 import {
   createTranslateRuntime,
   limitTextForTranslation,
@@ -8,6 +10,8 @@ import {
   type TranslateRuntime,
   translateText,
 } from "../src/translator.js";
+
+const t = createTranslator("en");
 
 type FetchCall = {
   url: string | URL | Request;
@@ -74,7 +78,8 @@ test("translateText asks for provider setup when LibreTranslate endpoint is miss
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "missing_endpoint");
-  assert.match(result.message, /endpoint/i);
+  assert.ok(!result.ok);
+  assert.match(describeTranslationFailure(result, t), /endpoint/i);
 });
 
 test("translateText posts LibreTranslate-compatible payload and parses translatedText", async () => {
@@ -270,7 +275,8 @@ test("translateText reports a rate limit and stops calling Google during cooldow
 
   assert.equal(first.ok, false);
   assert.equal(first.code, "rate_limited");
-  assert.match(first.message, /Google/);
+  assert.ok(!first.ok);
+  assert.match(describeTranslationFailure(first, t), /Google/);
   assert.ok((first.retryAfterMs || 0) > 0);
   assert.equal(requests, 3);
 
@@ -322,7 +328,7 @@ test("translateText falls back to Yandex when Google is rate limited", async () 
   assert.equal(result.ok, true);
   assert.equal(result.translatedText, "Привет, мир");
   assert.equal(result.provider, "yandex");
-  assert.match(String(result.note), /Yandex/);
+  assert.equal(result.fallbackFrom, "rate_limited");
 });
 
 test("translateText keeps the Google failure when the fallback also fails", async () => {
@@ -511,7 +517,8 @@ test("translateText asks for Yandex API key before calling provider", async () =
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "missing_yandex_api_key");
-  assert.match(result.message, /Yandex/i);
+  assert.ok(!result.ok);
+  assert.match(describeTranslationFailure(result, t), /Yandex/i);
 });
 
 test("translateText hides raw network error details from the result message", async () => {
@@ -531,6 +538,11 @@ test("translateText hides raw network error details from the result message", as
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "network_error");
-  assert.equal(result.message.includes("user:secret"), false);
-  assert.equal(result.message.includes("translate.example.com"), false);
+  assert.ok(!result.ok);
+
+  const shown = [JSON.stringify(result), describeTranslationFailure(result, t)].join(
+    "\n",
+  );
+  assert.equal(shown.includes("user:secret"), false);
+  assert.equal(shown.includes("translate.example.com"), false);
 });

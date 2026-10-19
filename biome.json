@@ -8,5 +8,18 @@
   "formatter": {
     "indentStyle": "space",
     "lineWidth": 90
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["options/**/*.html", "popup/**/*.html"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useHeadingContent": "off",
+            "noLabelWithoutControl": "off"
+          }
+        }
+      }
+    }
+  ]
 }

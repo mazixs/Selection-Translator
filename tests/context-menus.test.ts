@@ -12,6 +12,7 @@ const EXPECTED_MENU_IDS = [
 
 function createChromeMock() {
   const createdMenuIds = new Set();
+  const titles = new Map<string, string | undefined>();
   const duplicateErrors: string[] = [];
   let currentLastError: chrome.runtime.LastError | undefined;
   let lastErrorReads = 0;
@@ -45,6 +46,7 @@ function createChromeMock() {
             setLastError(message);
           } else {
             createdMenuIds.add(id);
+            titles.set(id, item.title);
             setLastError(undefined);
           }
 
@@ -55,6 +57,7 @@ function createChromeMock() {
     } satisfies ContextMenuChromeApi,
     duplicateErrors,
     getCreatedMenuIds: () => [...createdMenuIds],
+    getTitles: () => Object.fromEntries(titles),
     getLastErrorReads: () => lastErrorReads,
   };
 }
@@ -63,11 +66,26 @@ test("setupContextMenus serializes overlapping setup calls and consumes create e
   const mock = createChromeMock();
 
   await Promise.all([
-    setupContextMenus(mock.chromeApi),
-    setupContextMenus(mock.chromeApi),
+    setupContextMenus("en", mock.chromeApi),
+    setupContextMenus("en", mock.chromeApi),
   ]);
 
   assert.deepEqual(mock.duplicateErrors, []);
   assert.deepEqual(mock.getCreatedMenuIds(), EXPECTED_MENU_IDS);
   assert.ok(mock.getLastErrorReads() >= EXPECTED_MENU_IDS.length);
+});
+
+test("setupContextMenus titles the menu in the requested language", async () => {
+  const mock = createChromeMock();
+
+  await setupContextMenus("es", mock.chromeApi);
+  assert.deepEqual(mock.getTitles(), {
+    "selection-translator-parent": "Traducción",
+    "selection-translator-translate": "Traducir",
+    "selection-translator-copy": "Copiar",
+    "selection-translator-settings": "Ajustes",
+  });
+
+  await setupContextMenus("ru", mock.chromeApi);
+  assert.equal(mock.getTitles()["selection-translator-translate"], "Перевести");
 });

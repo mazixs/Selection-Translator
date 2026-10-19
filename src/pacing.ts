@@ -130,13 +130,3 @@ export function getBackoffMs(
 
   return Math.max(retryAfterMs, Math.min(4_000, base + jitter));
 }
-
-export function formatCooldownHint(remainingMs: number): string {
-  const seconds = Math.max(1, Math.ceil(remainingMs / 1000));
-
-  if (seconds < 60) {
-    return `${seconds} сек.`;
-  }
-
-  return `${Math.ceil(seconds / 60)} мин.`;
-}

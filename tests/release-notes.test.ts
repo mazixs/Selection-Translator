@@ -9,27 +9,27 @@ import { extractReleaseNotes, ReleaseNotesError } from "../scripts/release-notes
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
-const SAMPLE = `# Журнал изменений
+const SAMPLE = `# Changelog
 
-Вступление.
+Introduction.
 
 ## 1.4.0 - 2026-10-19
 
-### Добавлено
+### Added
 
-- Новое.
+- New.
 
-### Исправлено
+### Fixed
 
-- Починено.
+- Repaired.
 
 ## [1.3.0] - 2026-08-27
 
-- Старое.
+- Old.
 
 ## 1.2.0 - 2026-08-27
 
-### Добавлено
+### Added
 `;
 
 function readJson(path: string): {
@@ -46,19 +46,16 @@ function readChangelog(): string {
 test("extractReleaseNotes returns the body of one version without its heading", () => {
   assert.equal(
     extractReleaseNotes(SAMPLE, "1.4.0"),
-    "### Добавлено\n\n- Новое.\n\n### Исправлено\n\n- Починено.",
+    "### Added\n\n- New.\n\n### Fixed\n\n- Repaired.",
   );
 });
 
 test("extractReleaseNotes accepts a bracketed heading and stops at the next section", () => {
-  assert.equal(extractReleaseNotes(SAMPLE, "1.3.0"), "- Старое.");
+  assert.equal(extractReleaseNotes(SAMPLE, "1.3.0"), "- Old.");
 });
 
 test("extractReleaseNotes accepts CRLF line endings", () => {
-  assert.equal(
-    extractReleaseNotes(SAMPLE.replaceAll("\n", "\r\n"), "1.3.0"),
-    "- Старое.",
-  );
+  assert.equal(extractReleaseNotes(SAMPLE.replaceAll("\n", "\r\n"), "1.3.0"), "- Old.");
 });
 
 test("extractReleaseNotes fails loudly when the section is missing", () => {
@@ -68,8 +65,12 @@ test("extractReleaseNotes fails loudly when the section is missing", () => {
       error instanceof ReleaseNotesError && /no section for 1\.5\.0/.test(error.message),
   );
   // 1.4.0 must not match a longer version that starts with it.
-  assert.throws(() => extractReleaseNotes("## 1.4.01 - 2026-10-19\n\n- Нет.\n", "1.4.0"));
-  assert.throws(() => extractReleaseNotes("## 11.4.0 - 2026-10-19\n\n- Нет.\n", "1.4.0"));
+  assert.throws(() =>
+    extractReleaseNotes("## 1.4.01 - 2026-10-19\n\n- None.\n", "1.4.0"),
+  );
+  assert.throws(() =>
+    extractReleaseNotes("## 11.4.0 - 2026-10-19\n\n- None.\n", "1.4.0"),
+  );
 });
 
 test("extractReleaseNotes fails loudly when the section is empty", () => {
@@ -79,7 +80,7 @@ test("extractReleaseNotes fails loudly when the section is empty", () => {
   );
   assert.throws(() =>
     extractReleaseNotes(
-      "## 1.4.0 - 2026-10-19\n\n\n## 1.3.0 - 2026-08-27\n\n- Старое.\n",
+      "## 1.4.0 - 2026-10-19\n\n\n## 1.3.0 - 2026-08-27\n\n- Old.\n",
       "1.4.0",
     ),
   );
@@ -87,7 +88,7 @@ test("extractReleaseNotes fails loudly when the section is empty", () => {
 
 test("extractReleaseNotes rejects a duplicated section and a malformed version", () => {
   assert.throws(
-    () => extractReleaseNotes(`${SAMPLE}\n## 1.4.0 - 2026-10-20\n\n- Ещё.\n`, "1.4.0"),
+    () => extractReleaseNotes(`${SAMPLE}\n## 1.4.0 - 2026-10-20\n\n- More.\n`, "1.4.0"),
     /2 sections for 1\.4\.0/,
   );
 

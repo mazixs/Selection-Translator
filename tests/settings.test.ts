@@ -126,5 +126,14 @@ test("clampPanelOpacity keeps the panel readable", () => {
 
 test("panel starts translucent by default", () => {
   assert.equal(DEFAULT_SETTINGS.panelOpacity, 75);
+});
+
+test("mergeSettings follows the browser language unless a supported one is chosen", () => {
+  assert.equal(DEFAULT_SETTINGS.uiLanguage, "auto");
+  assert.equal(mergeSettings({}).uiLanguage, "auto");
+  assert.equal(mergeSettings({ uiLanguage: "es" }).uiLanguage, "es");
+  assert.equal(mergeSettings({ uiLanguage: "ru" }).uiLanguage, "ru");
+  assert.equal(mergeSettings({ uiLanguage: "de" }).uiLanguage, "auto");
+  assert.equal(mergeSettings({ uiLanguage: 1 }).uiLanguage, "auto");
   assert.equal(mergeSettings({}).panelOpacity, 75);
 });

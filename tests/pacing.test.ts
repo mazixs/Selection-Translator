@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   createCooldown,
   createPacer,
-  formatCooldownHint,
   getBackoffMs,
   MAX_COOLDOWN_MS,
   parseRetryAfterMs,
@@ -82,10 +81,4 @@ test("getBackoffMs grows, stays capped and respects Retry-After", () => {
   assert.equal(getBackoffMs(20, 0, random), 4_000);
   assert.equal(getBackoffMs(0, 9_000, random), 9_000);
   assert.ok(getBackoffMs(0, 0, () => 1) > getBackoffMs(0, 0, random));
-});
-
-test("formatCooldownHint speaks in seconds and minutes", () => {
-  assert.equal(formatCooldownHint(1_500), "2 сек.");
-  assert.equal(formatCooldownHint(45_000), "45 сек.");
-  assert.equal(formatCooldownHint(90_000), "2 мин.");
 });

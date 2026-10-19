@@ -14,16 +14,16 @@ The extension should also work in Yandex Browser if it supports the same Chromiu
 2. A compact floating menu appears near the selected text.
 3. The menu includes:
    - extension icon;
-   - `Перевести`;
+   - `Translate`;
    - copy selected text button;
    - copy translation button when a translation is available;
    - settings button;
    - close button.
-4. Clicking `Перевести` opens a floating translation panel near the selection.
+4. Clicking `Translate` opens a floating translation panel near the selection.
 5. The translation panel includes:
-   - target language selector, default `Русский`;
+   - target language selector, default Russian;
    - translated text area with internal scrolling for long text;
-   - `Скопировать перевод`;
+   - `Copy translation`;
    - close button;
    - loading and error states.
 6. The panel remains readable for long selections and does not cover the selected text more than necessary.
@@ -77,7 +77,7 @@ Settings saved with `chrome.storage.sync`:
 
 - Load the unpacked extension in Chromium-based browser.
 - Select short text and confirm the floating menu appears.
-- Click `Перевести` and confirm the scrollable panel opens.
+- Click `Translate` and confirm the scrollable panel opens.
 - Copy selected text and copied translation from the UI.
 - Open settings and save target language/provider options.
 - Confirm native context menu entries appear for selected text.

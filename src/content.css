@@ -127,17 +127,6 @@
   outline-offset: 2px;
 }
 
-#selection-translator-root .stx-button:disabled,
-#selection-translator-root .stx-icon-button:disabled {
-  color: #a0a7b2;
-  cursor: default;
-}
-
-#selection-translator-root .stx-button:disabled:hover,
-#selection-translator-root .stx-icon-button:disabled:hover {
-  background: transparent;
-}
-
 #selection-translator-root .stx-panel {
   border-radius: var(--stx-radius);
   box-shadow:

@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
 
+import { RUNTIME_ASSETS } from "./runtime-assets.js";
+
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const DIST = join(ROOT, "dist");
 
@@ -21,7 +23,7 @@ await Promise.all([
   copyProjectFile("manifest.json"),
   copyProjectFile("README.md"),
   copyProjectFile("LICENSE"),
-  copyProjectFile("assets"),
+  ...RUNTIME_ASSETS.map(copyProjectFile),
   copyProjectFile("src/content.css"),
   copyProjectFile("options/options.html"),
   copyProjectFile("options/options.css"),

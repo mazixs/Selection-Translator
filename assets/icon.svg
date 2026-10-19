@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Selection Translator</title>
+  <defs><mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128"><rect width="128" height="128" fill="#fff"/><rect x="52" y="52" width="72" height="72" rx="18" stroke="#000" stroke-width="16"/></mask></defs>
+  <g mask="url(#gap)"><rect x="4" y="4" width="72" height="72" rx="18" fill="#0a9680"/><path d="M31 12V19.2M13 19.2H49M39.6 19.2Q36 35.8 14.4 46.9M20.2 25Q28.1 42.2 44 46.9" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <rect x="52" y="52" width="72" height="72" rx="18" fill="#ec5a3a"/>
+  <path d="M71 106L89 69L107 106M77.1 94.2H100.9" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

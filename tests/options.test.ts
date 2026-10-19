@@ -10,7 +10,7 @@ test("options header uses the extension icon instead of a Yandex-like letter", (
   const optionsHtml = readFileSync(join(ROOT, "options/options.html"), "utf8");
 
   assert.equal(optionsHtml.includes('<div class="brand-mark">Y</div>'), false);
-  assert.equal(optionsHtml.includes('src="../assets/icon-48.png"'), true);
+  assert.equal(optionsHtml.includes('src="../assets/icon.svg"'), true);
 });
 
 test("options page exposes a single icon theme toggle", () => {

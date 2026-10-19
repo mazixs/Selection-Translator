@@ -100,9 +100,9 @@ git push origin v1.0.0
 | `src/` | TypeScript-код content script, background service worker, настроек и переводчиков |
 | `popup/` | Popup расширения: HTML/CSS и TypeScript entrypoint |
 | `options/` | Страница настроек: HTML/CSS и TypeScript entrypoint |
-| `assets/` | Иконки расширения |
-| `scripts/` | Сборка TypeScript-исходников в рабочий `dist/` |
-| `tests/` | Тесты manifest, UI-скриптов, настроек и переводчиков |
+| `assets/` | Иконки расширения: SVG-исходники и отрисованные из них PNG. В сборку попадают только файлы, которые расширение загружает |
+| `scripts/` | Сборка TypeScript-исходников в рабочий `dist/` и список ассетов, которые в неё входят |
+| `tests/` | Тесты manifest, состава сборки, UI-скриптов, настроек и переводчиков |
 | `.github/workflows/` | CI и CD сценарии GitHub Actions |
 
 ## Провайдеры перевода

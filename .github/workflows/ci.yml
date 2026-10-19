@@ -1,38 +1,124 @@
-name: CI
+name: CI/CD
 
 on:
   pull_request:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A newer push supersedes a check run, but a release is never interrupted.
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   verify:
     name: Verify extension
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Check tag version
+        if: github.ref_type == 'tag'
+        run: |
+          RAW_TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RAW_TAG_VERSION}"
+
+          if ! echo "${RAW_TAG_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+(\.[0-9]+)?$'; then
+            echo "Tag ${GITHUB_REF_NAME} must look like v1.0 or v1.0.0"
+            exit 1
+          fi
+
+          if echo "${RAW_TAG_VERSION}" | grep -Eq '^[0-9]+\.[0-9]+$'; then
+            TAG_VERSION="${RAW_TAG_VERSION}.0"
+          fi
+
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+
+          if [ "${TAG_VERSION}" != "${PACKAGE_VERSION}" ]; then
+            echo "Tag version ${TAG_VERSION} does not match package.json ${PACKAGE_VERSION}"
+            exit 1
+          fi
+
+          if [ "${TAG_VERSION}" != "${MANIFEST_VERSION}" ]; then
+            echo "Tag version ${TAG_VERSION} does not match manifest.json ${MANIFEST_VERSION}"
+            exit 1
+          fi
+
+          echo "RELEASE_VERSION=${TAG_VERSION}" >> "${GITHUB_ENV}"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: Run tests
-        run: npm run verify
+      - name: Lint
+        run: npm run lint
 
-      - name: Check package build
-        run: npm run pack
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Package extension
+        run: npm run zip
+
+      - name: Write release notes from CHANGELOG.md
+        if: github.ref_type == 'tag'
+        run: npm run --silent release-notes -- "${RELEASE_VERSION}" > outputs/release-notes.md
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: extension
+          path: outputs/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish release
+    needs: verify
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      # Publishes the exact archive that passed verification; nothing is rebuilt here.
+      - name: Download package
+        uses: actions/download-artifact@v8
+        with:
+          name: extension
+          path: outputs
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            outputs/selection-translator-extension.zip \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title "Selection Translator ${GITHUB_REF_NAME}" \
+            --notes-file outputs/release-notes.md

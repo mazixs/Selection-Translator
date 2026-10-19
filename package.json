@@ -11,12 +11,13 @@
     "build": "tsx scripts/build.ts",
     "verify": "npm run lint && npm run typecheck && npm test && npm run build",
     "release-notes": "tsx scripts/release-notes.ts",
-    "pack": "npm run build && mkdir -p outputs && rm -f outputs/selection-translator-extension.zip && cd dist && zip -r ../outputs/selection-translator-extension.zip ."
+    "zip": "mkdir -p outputs && rm -f outputs/selection-translator-extension.zip && cd dist && zip -qr ../outputs/selection-translator-extension.zip .",
+    "pack": "npm run build && npm run zip"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/chrome": "^0.1.43",
-    "@types/node": "^25.9.3",
+    "@types/node": "^24.19.2",
     "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"

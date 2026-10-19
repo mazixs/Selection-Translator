@@ -1,3 +1,4 @@
+import { getRequiredElement } from "../src/dom.js";
 import { loadSettings } from "../src/settings.js";
 
 const LANGUAGE_NAMES: Partial<Record<string, string>> = {
@@ -10,19 +11,6 @@ const LANGUAGE_NAMES: Partial<Record<string, string>> = {
   tr: "Турецкий",
   uk: "Украинский",
 };
-
-function getRequiredElement<T extends Element>(
-  selector: string,
-  constructor: { new (...args: never[]): T },
-): T {
-  const element = document.querySelector(selector);
-
-  if (!(element instanceof constructor)) {
-    throw new Error(`Missing required element: ${selector}`);
-  }
-
-  return element;
-}
 
 const statusLine = getRequiredElement("#status-line", HTMLParagraphElement);
 const targetLanguage = getRequiredElement("#target-language", HTMLElement);

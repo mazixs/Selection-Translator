@@ -1,3 +1,4 @@
+import { getRequiredElement } from "../src/dom.js";
 import {
   clampPanelOpacity,
   DEFAULT_SETTINGS,
@@ -30,19 +31,6 @@ type SettingsFormControls = HTMLFormControlsCollection & {
 type SettingsFormElement = HTMLFormElement & {
   readonly elements: SettingsFormControls;
 };
-
-function getRequiredElement<T extends Element>(
-  selector: string,
-  constructor: { new (...args: never[]): T },
-): T {
-  const element = document.querySelector(selector);
-
-  if (!(element instanceof constructor)) {
-    throw new Error(`Missing required element: ${selector}`);
-  }
-
-  return element;
-}
 
 const form = getRequiredElement("#settings-form", HTMLFormElement) as SettingsFormElement;
 const fields = form.elements;
